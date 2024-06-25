@@ -1,0 +1,542 @@
+$defs:
+  landingPage:
+    required:
+    - links
+    type: object
+    properties:
+      title:
+        type: string
+        example: Example processing server
+      description:
+        type: string
+        example: Example server implementing the OGC API - Processes 1.0 Standard
+      links:
+        type: array
+        items:
+          $ref: '#/$defs/link'
+  exception:
+    title: Exception Schema
+    required:
+    - type
+    type: object
+    properties:
+      type:
+        type: string
+      title:
+        type: string
+      status:
+        type: integer
+      detail:
+        type: string
+      instance:
+        type: string
+    additionalProperties: true
+    description: JSON schema for exceptions based on RFC 7807
+  confClasses:
+    required:
+    - conformsTo
+    type: object
+    properties:
+      conformsTo:
+        type: array
+        items:
+          type: string
+          example: http://www.opengis.net/spec/ogcapi-processes-1/1.0/conf/core
+  processList:
+    required:
+    - links
+    - processes
+    type: object
+    properties:
+      processes:
+        type: array
+        items:
+          $ref: '#/$defs/processSummary'
+      links:
+        type: array
+        items:
+          $ref: '#/$defs/link'
+  process:
+    allOf:
+    - $ref: '#/$defs/processSummary'
+    - type: object
+      properties:
+        inputs:
+          type: object
+          additionalProperties:
+            $ref: '#/$defs/inputDescription'
+        outputs:
+          type: object
+          additionalProperties:
+            $ref: '#/$defs/outputDescription'
+  jobList:
+    required:
+    - jobs
+    - links
+    type: object
+    properties:
+      jobs:
+        type: array
+        items:
+          $ref: '#/$defs/statusInfo'
+      links:
+        type: array
+        items:
+          $ref: '#/$defs/link'
+  execute:
+    type: object
+    properties:
+      inputs:
+        type: object
+        additionalProperties:
+          oneOf:
+          - $ref: '#/$defs/inlineOrRefData'
+          - type: array
+            items:
+              $ref: '#/$defs/inlineOrRefData'
+      outputs:
+        type: object
+        additionalProperties:
+          $ref: '#/$defs/output'
+      response:
+        type: string
+        default: raw
+        enum:
+        - raw
+        - document
+      subscriber:
+        $ref: '#/$defs/subscriber'
+  results:
+    type: object
+    additionalProperties:
+      $ref: '#/$defs/inlineOrRefData'
+  statusInfo:
+    required:
+    - jobID
+    - status
+    - type
+    type: object
+    properties:
+      processID:
+        type: string
+      type:
+        type: string
+        enum:
+        - process
+      jobID:
+        type: string
+      status:
+        $ref: '#/$defs/statusCode'
+      message:
+        type: string
+      created:
+        type: string
+        format: date-time
+      started:
+        type: string
+        format: date-time
+      finished:
+        type: string
+        format: date-time
+      updated:
+        type: string
+        format: date-time
+      progress:
+        maximum: 100
+        minimum: 0
+        type: integer
+      links:
+        type: array
+        items:
+          $ref: '#/$defs/link'
+  link:
+    required:
+    - href
+    type: object
+    properties:
+      href:
+        type: string
+      rel:
+        type: string
+        example: service
+      type:
+        type: string
+        example: application/json
+      hreflang:
+        type: string
+        example: en
+      title:
+        type: string
+  processSummary:
+    allOf:
+    - $ref: '#/$defs/descriptionType'
+    - required:
+      - id
+      - version
+      type: object
+      properties:
+        id:
+          type: string
+        version:
+          type: string
+        jobControlOptions:
+          type: array
+          items:
+            $ref: '#/$defs/jobControlOptions'
+        outputTransmission:
+          type: array
+          items:
+            $ref: '#/$defs/transmissionMode'
+        links:
+          type: array
+          items:
+            $ref: '#/$defs/link'
+  inputDescription:
+    allOf:
+    - $ref: '#/$defs/descriptionType'
+    - required:
+      - schema
+      type: object
+      properties:
+        minOccurs:
+          type: integer
+          default: 1
+        maxOccurs:
+          oneOf:
+          - type: integer
+            default: 1
+          - type: string
+            enum:
+            - unbounded
+        schema:
+          $ref: '#/$defs/schema'
+  outputDescription:
+    allOf:
+    - $ref: '#/$defs/descriptionType'
+    - required:
+      - schema
+      type: object
+      properties:
+        schema:
+          $ref: '#/$defs/schema'
+  inlineOrRefData:
+    oneOf:
+    - $ref: '#/$defs/inputValueNoObject'
+    - $ref: '#/$defs/qualifiedInputValue'
+    - $ref: '#/$defs/link'
+  output:
+    type: object
+    properties:
+      format:
+        $ref: '#/$defs/format'
+      transmissionMode:
+        $ref: '#/$defs/transmissionMode'
+  subscriber:
+    required:
+    - successUrl
+    type: object
+    properties:
+      successUri:
+        type: string
+        format: uri
+      inProgressUri:
+        type: string
+        format: uri
+      failedUri:
+        type: string
+        format: uri
+    description: "Optional URIs for callbacks for this job.\n\nSupport for this\
+      \ parameter is not required and the parameter may be\nremoved from the API\
+      \ definition, if conformance class **'callback'**\nis not listed in the conformance\
+      \ declaration under `/conformance`."
+  statusCode:
+    type: string
+    nullable: false
+    enum:
+    - accepted
+    - running
+    - successful
+    - failed
+    - dismissed
+  descriptionType:
+    type: object
+    properties:
+      title:
+        type: string
+      description:
+        type: string
+      keywords:
+        type: array
+        items:
+          type: string
+      metadata:
+        type: array
+        items:
+          $ref: '#/$defs/metadata'
+      additionalParameters:
+        allOf:
+        - $ref: '#/$defs/metadata'
+        - type: object
+          properties:
+            parameters:
+              type: array
+              items:
+                $ref: '#/$defs/additionalParameter'
+  jobControlOptions:
+    type: string
+    enum:
+    - sync-execute
+    - async-execute
+    - dismiss
+  transmissionMode:
+    type: string
+    default: value
+    enum:
+    - value
+    - reference
+  schema:
+    oneOf:
+    - $ref: '#/$defs/reference'
+    - type: object
+      properties:
+        title:
+          type: string
+        multipleOf:
+          minimum: 0
+          exclusiveMinimum: true
+          type: number
+        maximum:
+          type: number
+        exclusiveMaximum:
+          type: boolean
+          default: false
+        minimum:
+          type: number
+        exclusiveMinimum:
+          type: boolean
+          default: false
+        maxLength:
+          minimum: 0
+          type: integer
+        minLength:
+          minimum: 0
+          type: integer
+          default: 0
+        pattern:
+          type: string
+          format: regex
+        maxItems:
+          minimum: 0
+          type: integer
+        minItems:
+          minimum: 0
+          type: integer
+          default: 0
+        uniqueItems:
+          type: boolean
+          default: false
+        maxProperties:
+          minimum: 0
+          type: integer
+        minProperties:
+          minimum: 0
+          type: integer
+          default: 0
+        required:
+          minItems: 1
+          uniqueItems: true
+          type: array
+          items:
+            type: string
+        enum:
+          minItems: 1
+          uniqueItems: false
+          type: array
+          items:
+            type: object
+        type:
+          type: string
+          enum:
+          - array
+          - boolean
+          - integer
+          - number
+          - object
+          - string
+        not:
+          oneOf:
+          - $ref: '#/$defs/schema'
+          - $ref: '#/$defs/reference'
+        allOf:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/$defs/schema'
+            - $ref: '#/$defs/reference'
+        oneOf:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/$defs/schema'
+            - $ref: '#/$defs/reference'
+        anyOf:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/$defs/schema'
+            - $ref: '#/$defs/reference'
+        items:
+          oneOf:
+          - $ref: '#/$defs/schema'
+          - $ref: '#/$defs/reference'
+        properties:
+          type: object
+          additionalProperties:
+            oneOf:
+            - $ref: '#/$defs/schema'
+            - $ref: '#/$defs/reference'
+        additionalProperties:
+          oneOf:
+          - $ref: '#/$defs/schema'
+          - $ref: '#/$defs/reference'
+          - type: boolean
+          default: true
+        description:
+          type: string
+        format:
+          type: string
+        default:
+          type: object
+        nullable:
+          type: boolean
+          default: false
+        readOnly:
+          type: boolean
+          default: false
+        writeOnly:
+          type: boolean
+          default: false
+        example:
+          type: object
+        deprecated:
+          type: boolean
+          default: false
+        contentMediaType:
+          type: string
+        contentEncoding:
+          type: string
+        contentSchema:
+          type: string
+      additionalProperties: false
+  inputValueNoObject:
+    oneOf:
+    - type: string
+    - type: number
+    - type: integer
+    - type: boolean
+    - type: array
+      items:
+        type: string
+    - $ref: '#/$defs/binaryInputValue'
+    - $ref: '#/$defs/bbox'
+  qualifiedInputValue:
+    allOf:
+    - $ref: '#/$defs/format'
+    - required:
+      - value
+      type: object
+      properties:
+        value:
+          $ref: '#/$defs/inputValue'
+  format:
+    type: object
+    properties:
+      mediaType:
+        type: string
+      encoding:
+        type: string
+      schema:
+        oneOf:
+        - type: string
+          format: url
+        - type: object
+  metadata:
+    type: object
+    properties:
+      title:
+        type: string
+      role:
+        type: string
+      href:
+        type: string
+  additionalParameter:
+    required:
+    - name
+    - value
+    type: object
+    properties:
+      name:
+        type: string
+      value:
+        type: array
+        items:
+          oneOf:
+          - type: string
+          - type: number
+          - type: integer
+          - type: array
+            items:
+              type: object
+          - type: object
+  reference:
+    required:
+    - $ref
+    type: object
+    properties:
+      $ref:
+        type: string
+        format: uri-reference
+  binaryInputValue:
+    type: string
+    format: byte
+  bbox:
+    required:
+    - bbox
+    type: object
+    properties:
+      bbox:
+        type: array
+        oneOf:
+        - maxItems: 4
+          minItems: 4
+          type: object
+        - maxItems: 6
+          minItems: 6
+          type: object
+        items:
+          type: number
+      crs:
+        type: string
+        format: uri
+        default: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+        enum:
+        - http://www.opengis.net/def/crs/OGC/1.3/CRS84
+        - http://www.opengis.net/def/crs/OGC/0/CRS84h
+  inputValue:
+    oneOf:
+    - $ref: '#/$defs/inputValueNoObject'
+    - type: object
+  inline_response_200:
+    oneOf:
+    - type: string
+    - type: number
+    - type: integer
+    - type: object
+      nullable: true
+    - type: array
+      items:
+        type: object
+    - type: boolean
+    - type: string
+      format: binary
+    - $ref: '#/$defs/results'
