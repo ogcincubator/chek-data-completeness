@@ -1,0 +1,32 @@
+@prefix chek: <urn:chek:vocab/> .
+@prefix chekp: <urn:chek:profiles/> .
+@prefix ap: <urn:chek:profiles/ascoli-piceno/> .
+@prefix prof: <http://www.w3.org/ns/dx/prof/> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix role: <http://www.w3.org/ns/dx/prof/role/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sd: <https://w3id.org/okn/o/sd#> .
+
+chekp:dummy a prof:Profile, chekp:Profile ;
+  dct:title "Dummy profile with no rules" ;
+  prof:isProfileOf chekp:chek ;
+  prof:hasToken "chek-dummy" ;
+.
+
+chekp:ascoli-piceno a prof:Profile, chekp:Profile ;
+  dct:title "Ascoli Piceno profile for CHEK" ;
+  prof:isProfileOf chekp:chek ;
+  prof:hasToken "chek-ascoli-piceno" ;
+  prof:hasResource [
+    a prof:ResourceDescriptior ;
+    prof:hasRole role:validation ;
+    dct:format <https://w3id.org/mediatype/text/turtle> ;
+    dct:conformsTo <https://www.w3.org/TR/shacl/> ;
+    prof:hasArtifact <./ap-shapes.shacl> ;
+  ] ;
+  sd:hasParameter [
+    dct:identifier "pointOfInterest" ;
+    dct:description "Central point of interest (e.g., location of building of interest) for validation" ;
+    sd:hasDataType "string" ;
+  ] ;
+.

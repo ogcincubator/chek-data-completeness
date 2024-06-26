@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request
 from app import model
+from app.config import settings
+from app.profiles import ProfileLoader, ProfileList
 
 app_metadata = {
     'title': 'CHEK data completeness service',
@@ -10,6 +12,18 @@ app_metadata = {
 app = FastAPI(
     **app_metadata
 )
+
+app.profile_loader = None
+
+
+@app.on_event("startup")
+def initialize():
+    app.profile_loader = ProfileLoader(settings.data_source)
+
+
+@app.on_event("shutdown")
+def shutdown():
+    app.profile_loader.close()
 
 
 @app.get('/')
@@ -66,3 +80,8 @@ def job():
 @app.get('/jobs/{job_id}/results')
 def job_results():
     pass
+
+
+@app.get('/profiles')
+def profiles():
+    return ProfileList(app.profile_loader.profiles.values())
