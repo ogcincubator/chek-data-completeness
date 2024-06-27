@@ -8,16 +8,18 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union, Set
 
-from pydantic import AnyUrl, BaseModel, Extra, Field, PositiveFloat, conint, RootModel, BaseConfig
+from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, Field, PositiveFloat, conint, RootModel, BaseConfig
 
 
 class Model(BaseModel):
     class Config(BaseConfig):
-        pass
+        json_encoders = {
+            BaseModel: lambda x: x.dict(exclude_none=True),
+        }
 
 
 class Exception(Model):
-    class Config:
+    class Config(Model.Config):
         extra = Extra.allow
 
     type: str

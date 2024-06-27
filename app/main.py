@@ -15,7 +15,7 @@ app = FastAPI(
     **app_metadata
 )
 
-app.profile_loader: ProfileLoader | None = None
+app.profile_loader = None
 
 
 @app.on_event("startup")
@@ -46,7 +46,7 @@ def capabilities(req: Request) -> model.LandingPage:
             model.Link(rel='http://www.opengis.net/def/rel/ogc/1.0/conformance',
                        href=str(req.url_for('conformance'))),
             model.Link(rel='http://www.opengis.net/def/rel/ogc/1.0/processes',
-                       href=str(req.url_for('processes'))),
+                       href=str(req.url_for('list_processes'))),
         ])
 
 
