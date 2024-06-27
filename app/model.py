@@ -13,9 +13,7 @@ from pydantic import AnyUrl, BaseModel, Extra, Field, PositiveFloat, conint, Roo
 
 class Model(BaseModel):
     class Config(BaseConfig):
-        json_encoders = {
-            BaseModel: lambda v: v.dict(exclude_unset=True)
-        }
+        pass
 
 
 class Exception(Model):
@@ -226,7 +224,7 @@ class OutputDescription(DescriptionType):
 
 
 class Schema1(Model):
-    class Config:
+    class Config(Model.Config):
         extra = Extra.forbid
 
     title: Optional[str] = None

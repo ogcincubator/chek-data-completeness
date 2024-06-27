@@ -1,15 +1,17 @@
 import json
+import os.path
 import re
 from pathlib import Path
 from threading import Timer
 from typing import Sequence, List
+from urllib.parse import unquote, urlparse
 
-from pydantic import parse_obj_as, RootModel
+from pydantic import parse_obj_as, RootModel, field_serializer
 from pyld import jsonld
 from rdflib import Graph
 
+from app import model
 from app.model import Model
-
 
 RELOAD_TIME = 60 * 5
 
@@ -23,7 +25,9 @@ CONSTRUCT {
 } WHERE {
   SERVICE <__SERVICE__> {
     ?uri a chekp:Profile .
+    OPTIONAL { ?uri dct:hasVersion ?version }
     OPTIONAL { ?uri dct:title ?title }
+    OPTIONAL { ?uri dct:description ?description }
     OPTIONAL { ?uri prof:hasToken ?token }
     OPTIONAL { ?uri prof:isProfileOf ?profileOf }
     OPTIONAL { 
@@ -55,6 +59,7 @@ LOAD_PROFILES_FRAME = json.loads('''
     "description": "dct:description",
     "identifier": "dct:identifier",
     "dataType": "sd:hasDataType",
+    "version": "dct:version",
     "parameters": {
       "@id": "sd:hasParameter",
       "@container": "@set"
@@ -96,9 +101,15 @@ LOAD_PROFILES_FRAME = json.loads('''
 
 class Resource(Model):
     role: str
-    format: str | None
-    conformsTo: str | None
+    format: str | None = None
+    conformsTo: str | None = ''
     artifacts: list[str] = []
+
+    @field_serializer('artifacts')
+    def serialize_artifacts(self, artifacts: list[str], _info):
+        return [a if re.match('^https?://', a)
+                else os.path.relpath(unquote(urlparse(a).path))
+                for a in artifacts]
 
 
 class Parameter(Model):
@@ -109,11 +120,47 @@ class Parameter(Model):
 
 class Profile(Model):
     uri: str
-    title: str | None
-    token: str | None
+    title: str | None = None
+    description: str | None = None
+    token: str | None = None
+    version: str = ''
     profileOf: list[str] = []
     resources: list[Resource] = []
     parameters: list[Parameter] = []
+
+    def get_id(self):
+        if self.token:
+            return self.token
+        # Remove URL scheme
+        uri_id = re.sub(r'^https?://', '', str(self.uri))
+        # Keep only allowed characters
+        uri_id = re.sub(r'[^A-Za-z0-9_-]+', '_', uri_id)
+        return uri_id
+
+    def to_process_summary(self) -> model.ProcessSummary:
+        return model.ProcessSummary(
+            id=self.get_id(),
+            version=self.version,
+            title=self.title,
+            description=self.description,
+        )
+
+    def to_process_description(self) -> model.Process:
+        inputs = {
+            param.identifier: model.InputDescription(
+                title=param.identifier,
+                description=param.description,
+                minOccurs=1,
+                maxOccurs=1,
+                schema=model.Schema(
+                    type=param.dataType,
+                ),
+            ) for param in self.parameters
+        }
+        return model.Process(
+            **self.to_process_summary().dict(),
+            inputs=inputs,
+        )
 
 
 ProfileList = RootModel[List[Profile]]
@@ -140,26 +187,26 @@ class ProfileLoader:
                 g.parse(self.source)
             else:
                 files = set()
-                for p in Path().glob(self.source):
-                    if p.is_file():
-                        files.add(p)
+                for path in Path().glob(self.source):
+                    if path.is_file():
+                        files.add(path)
                     else:
-                        files.update(p.glob('**/*'))
-
+                        files.update(path.glob('**/*'))
                 if not files:
                     raise ValueError(f'No files found for source {self.source}')
                 for file in files:
                     g.parse(file)
 
         profiles_obj = jsonld.frame(json.loads(g.serialize(format='json-ld')),
-                                LOAD_PROFILES_FRAME)
+                                    LOAD_PROFILES_FRAME)
         if '@graph' in profiles_obj:
             profiles_obj = profiles_obj['@graph']
         else:
             profiles_obj = [profiles_obj]
 
         profiles = parse_obj_as(List[Profile], profiles_obj)
-        self.profiles = {profile.uri: profile for profile in sorted(profiles, key=lambda p: (p.token, p.uri))}
+        self.profiles = {profile.get_id(): profile
+                         for profile in sorted(profiles, key=lambda x: (x.token, x.uri))}
 
         self._schedule_reload()
 

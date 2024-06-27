@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.encoders import jsonable_encoder
+
 from app import model
 from app.config import settings
 from app.profiles import ProfileLoader, ProfileList
@@ -13,7 +15,7 @@ app = FastAPI(
     **app_metadata
 )
 
-app.profile_loader = None
+app.profile_loader: ProfileLoader | None = None
 
 
 @app.on_event("startup")
@@ -27,7 +29,7 @@ def shutdown():
 
 
 @app.get('/')
-def capabilities(req: Request):
+def capabilities(req: Request) -> model.LandingPage:
     return model.LandingPage(
         title=app_metadata['title'],
         description=app_metadata['description'],
@@ -49,7 +51,7 @@ def capabilities(req: Request):
 
 
 @app.get('/conformance')
-def conformance():
+def conformance() -> model.ConfClasses:
     return model.ConfClasses(conformsTo=[
         'http://www.opengis.net/spec/ogcapi-processes-1/1.0/conf/core',
         'http://www.opengis.net/spec/ogcapi-processes-1/1.0/conf/json',
@@ -58,13 +60,25 @@ def conformance():
 
 
 @app.get('/processes')
-def processes():
-    pass
+def list_processes() -> model.ProcessList:
+    return model.ProcessList(
+        processes=[profile.to_process_summary() for profile in app.profile_loader.profiles.values()],
+        links=[],
+    )
 
 
 @app.get('/processes/{process_id}')
-def process():
-    pass
+def view_process(process_id: str) -> model.Process:
+    profile = app.profile_loader.profiles.get(process_id)
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail=model.Exception(
+                type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
+                status=404,
+                title='Process not found',
+            ).dict(exclude_none=True))
+    return profile.to_process_description()
 
 
 @app.post('/process/{process_id}/execution')
@@ -73,7 +87,7 @@ def process_execution():
 
 
 @app.get('/jobs/{job_id}')
-def job():
+def view_job():
     pass
 
 
@@ -83,5 +97,5 @@ def job_results():
 
 
 @app.get('/profiles')
-def profiles():
+def get_profiles() -> ProfileList:
     return ProfileList(app.profile_loader.profiles.values())

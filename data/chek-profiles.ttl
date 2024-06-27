@@ -11,10 +11,12 @@ chekp:dummy a prof:Profile, chekp:Profile ;
   dct:title "Dummy profile with no rules" ;
   prof:isProfileOf chekp:chek ;
   prof:hasToken "chek-dummy" ;
+  dct:hasVersion "1.0" ;
 .
 
 chekp:ascoli-piceno a prof:Profile, chekp:Profile ;
   dct:title "Ascoli Piceno profile for CHEK" ;
+  dct:hasVersion "0.1" ;
   prof:isProfileOf chekp:chek ;
   prof:hasToken "chek-ascoli-piceno" ;
   prof:hasResource [
