@@ -15,6 +15,37 @@ from app.model import Model
 
 RELOAD_TIME = 60 * 5
 
+COMMON_INPUTS = {
+    'city_file': model.InputDescription(
+        title='Input data file',
+        description='Input data file (CityJSON or CityGML)',
+        minOccurs=1,
+        maxOccurs=model.MaxOccurs.unbounded,
+        schema=model.Schema(
+            type='string',
+            contentEncoding='binary',
+            oneOf=[
+                model.Schema(contentMediaType='application/city+json'),
+                model.Schema(contentMediaType='application/gml+xml'),
+            ],
+        ),
+    ),
+    'city_file_base64': model.InputDescription(
+        title='Input data file in base64 format',
+        description='Input data file (CityJSON or CityGML) in base64 format',
+        minOccurs=1,
+        maxOccurs=model.MaxOccurs.unbounded,
+        schema=model.Schema(
+            type='string',
+            contentEncoding='binary',
+            oneOf=[
+                model.Schema(contentMediaType='application/city+json'),
+                model.Schema(contentMediaType='application/gml+xml'),
+            ],
+        ),
+    ),
+}
+
 LOAD_PROFILES_SPARQL = '''
 PREFIX chekp: <urn:chek:profiles/>
 PREFIX dct:  <http://purl.org/dc/terms/>
@@ -147,15 +178,18 @@ class Profile(Model):
 
     def to_process_description(self) -> model.Process:
         inputs = {
-            param.identifier: model.InputDescription(
-                title=param.identifier,
-                description=param.description,
-                minOccurs=1,
-                maxOccurs=1,
-                schema=model.Schema(
-                    type=param.dataType,
-                ),
-            ) for param in self.parameters
+            **COMMON_INPUTS,
+            **{
+                param.identifier: model.InputDescription(
+                    title=param.identifier,
+                    description=param.description,
+                    minOccurs=1,
+                    maxOccurs=1,
+                    schema=model.Schema(
+                        type=param.dataType,
+                    ),
+                ) for param in self.parameters
+            }
         }
         return model.Process(
             **self.to_process_summary().dict(),
@@ -170,6 +204,7 @@ class ProfileLoader:
 
     def __init__(self, source: str):
         self.profiles: dict[str, Profile] = {}
+        self.profile_shacl: dict[str, Graph] = {}
 
         self._is_sparql = source.startswith('sparql:')
         self.source = source[len('sparql:') if self._is_sparql else 0:]
@@ -179,6 +214,8 @@ class ProfileLoader:
         self._reload_profiles()
 
     def _reload_profiles(self):
+        self.profiles = {}
+        self.profile_shacl = {}
         g = Graph()
         if self._is_sparql:
             g = g.query(LOAD_PROFILES_SPARQL.replace('__SERVICE__', self.source)).graph

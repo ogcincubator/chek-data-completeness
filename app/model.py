@@ -273,3 +273,21 @@ Process.update_forward_refs()
 InputDescription.update_forward_refs()
 OutputDescription.update_forward_refs()
 Schema1.update_forward_refs()
+
+
+class InputFile(Model):
+    name: str
+    data_str: str
+
+
+class ValidationInputs(Model):
+    class Config:
+        extra = Extra.allow
+
+    cityFiles: List[InputFile]
+
+
+class ValidationExecute(Execute):
+    inputs: ValidationInputs
+    outputs: Optional[Dict[str, Output]] = None
+    response: Optional[Response] = 'raw'

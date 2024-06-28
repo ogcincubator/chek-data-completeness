@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.encoders import jsonable_encoder
 
 from app import model
 from app.config import settings
+from app.jobs import job_executor
 from app.profiles import ProfileLoader, ProfileList
 
 app_metadata = {
@@ -81,19 +82,83 @@ def view_process(process_id: str) -> model.Process:
     return profile.to_process_description()
 
 
-@app.post('/process/{process_id}/execution')
-def process_execution():
-    pass
+@app.post('/processes/{process_id}/execution', status_code=201)
+def process_execution(process_id: str, data: model.ValidationExecute, req: Request, resp: Response) -> model.StatusInfo:
+    profile = app.profile_loader.profiles.get(process_id)
+
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail=model.Exception(
+                type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
+                status=404,
+                title='Process not found',
+            ).dict(exclude_none=True))
+
+    job = job_executor.create_job(city_files=data.inputs.cityFiles)
+    job_id = job.job_id
+    job.execute_sync([profile])
+
+    resp.headers['Location'] = str(req.url_for('view_job', job_id=job_id))
+    resp.headers['Preference-Applied'] = 'async-execute'
+    return model.StatusInfo(
+        processID=process_id,
+        jobID=job_id,
+        status=job.status,
+        type=model.Type.process,
+    )
 
 
 @app.get('/jobs/{job_id}')
-def view_job():
-    pass
+def view_job(job_id: str) -> model.StatusInfo:
+    job = job_executor.get_job(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail=model.Exception(
+                type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
+                status=404,
+                title='Job not found',
+            ).dict(exclude_none=True))
+    return model.StatusInfo(
+        jobID=job_id,
+        status=job.status,
+        type=model.Type.process,
+    )
 
 
 @app.get('/jobs/{job_id}/results')
-def job_results():
-    pass
+def job_results(job_id: str):
+    job = job_executor.get_job(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail=model.Exception(
+                type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
+                status=404,
+                title='Job not found',
+            ).dict(exclude_none=True))
+
+    if job.errors:
+        return {
+            'valid': False,
+            'errors': [str(e) for e in job.errors],
+        }
+    else:
+        return {
+            'valid': job.valid,
+            'val3dityResult': job.val3dity_result,
+            'shaclResult': job.shacl_result,
+            'validation': [
+                {
+                    'name': file_result.input_file.name,
+                    'valid': file_result.valid,
+                    'val3dityReport': file_result.val3dity_report,
+                    'shaclReport': file_result.shacl_report,
+                }
+                for file_result in job.city_files
+            ]
+        }
 
 
 @app.get('/profiles')

@@ -1,0 +1,177 @@
+transform:
+  # Assign fragment ids to City Objects and format geometries (semantics surfaces/values)
+  - |
+    def replace_vertices: if . | type == "array" then map(replace_vertices) else "#vertices-\(. | @uri)" end ;
+    .CityObjects |= [
+      to_entries | .[] 
+      | .value.parents |= if . then map("_:city-objects-\(.)") else empty end
+      | { "@id": "#city-objects-\(.key | @uri)" } + .value
+      | .geometry |= ([ .[] |
+        .type as $GEOM_TYPE | (.boundaries | replace_vertices) as $BOUNDARIES | (try (.semantics.values | to_entries) catch []) as $INDEXES
+        | {
+          "surfaces": (if .semantics.surfaces
+            then [.semantics.surfaces | to_entries | .[] | .key as $IDX | .value | {"@type": [$GEOM_TYPE, .type], "boundaries": [$BOUNDARIES | .[$INDEXES | map(if .value == $IDX then .key else empty end) | .[]]]}]
+            else [{"@type": $GEOM_TYPE, "boundaries": $BOUNDARIES}]
+            end),
+          "lod": "\(.lod)"
+        }
+      ])
+    ]
+  # Format coordinates and assign fragment ids to vertices
+  - |
+    def to_coords: if . then { "city:x": .[0], "city:y": .[1], "city:z": .[2] } else empty end ;
+    (.transform.scale |= to_coords) | (.transform.translate |= to_coords)
+    | .metadata.geographicalExtent |= if . then { 
+      "city:min": .[0:3] | to_coords,
+      "city:max": .[3:6] | to_coords
+    } else empty end
+    | .vertices |= [to_entries | .[] | { "@id": "#vertices-\(.key | @uri)" } + (.value | to_coords) ]
+  # Add base and prefix for it
+  - |
+    ."@context" = {
+      "@base": "https://raw.githubusercontent.com/ogcincubator/chek-profiles/master/\($_relname)",
+      "c": "https://raw.githubusercontent.com/ogcincubator/chek-profiles/master/\($_relname)#"
+    }
+
+context:
+  $:
+    '@version': 1.1
+    '@base': '#'
+
+    city: http://example.com/vocab/city/
+    dct: http://purl.org/dc/terms/
+    xsd: http://www.w3.org/2001/XMLSchema#
+    gml: http://www.opengis.net/ont/gml#
+
+    CityJSON: city:City
+
+    type: '@type'
+    version: city:version
+
+    CityObjects:
+      '@id': city:hasObject
+      '@context':
+        # City Objects
+        Bridge: city:Bridge
+        BridgeConstructiveElement: city:BridgeConstructiveElement
+        BridgeFurniture: city:BridgeFurniture
+        BridgeInstallation: city:BridgeInstallation
+        BridgePart: city:BridgePart
+        BridgeRoom: city:BridgeRoom
+        Building: city:Building
+        BuildingConstructiveElement: city:BuildingConstructiveElement
+        BuildingFurniture: city:BuildingFurniture
+        BuildingInstallation: city:BuildingInstallation
+        BuildingPart: city:BuildingPart
+        BuildingRoom: city:BuildingRoom
+        BuildingStorey: city:BuildingStorey
+        BuildingUnit: city:BuildingUnit
+        CityFurniture: city:CityFurniture
+        CityObjectGroup: city:CityObjectGroup
+        ExtensionObject: city:ExtensionObject
+        LandUse: city:LandUse
+        OtherConstruction: city:OtherConstruction
+        PlantCover: city:PlantCover
+        Railway: city:Railway
+        Road: city:Road
+        SolitaryVegetationObject: city:SolitaryVegetationObject
+        TINRelief: city:TINRelief
+        TransportSquare: city:TransportSquare
+        Tunnel: city:Tunnel
+        TunnelConstructiveElement: city:TunnelConstructiveElement
+        TunnelFurniture: city:TunnelFurniture
+        TunnelHollowSpace: city:TunnelHollowSpace
+        TunnelInstallation: city:TunnelInstallation
+        TunnelPart: city:TunnelPart
+        WaterBody: city:WaterBody
+        Waterway: city:Waterway
+        _AbstractBuilding: city:_AbstractBuilding
+        _AbstractCityObject: city:_AbstractCityObject
+        _AbstractTransportationComplex: city:_AbstractTransportationComplex
+        '+GenericCityObject': https://www.cityjson.org/extensions/download/generic.ext.json#GenericCityObject
+        
+        geometry:
+          '@id': city:hasGeometry
+          '@context':
+            # Geometry Objects
+            GeometryInstance: city:GeometryInstance
+            Semantics: city:Semantics
+
+            CompositeSolid: gml:CompositeSolid
+            CompositeSurface: gml:CompositeSurface
+            MultiLineString: gml:MultiLineString
+            MultiPoint: gml:MultiPoint
+            MultiSolid: gml:MultiSolid
+            MultiSurface: gml:MultiSurface
+            Solid: gml:Solid
+
+            # Geometric primitives
+            RoofSurface: city:RoofSurface
+            GroundSurface: city:GroundSurface
+            WallSurface: city:WallSurface
+            ClosureSurface: city:ClosureSurface
+            OuterCeilingSurface: city:OuterCeilingSurface
+            OuterFloorSurface: city:OuterFloorSurface
+            Window: city:Window
+            Door: city:Door
+            InteriorWallSurface: city:InteriorWallSurface
+            CeilingSurface: city:CeilingSurface
+            FloorSurface: city:FloorSurface
+            WaterSurface: city:WaterSurface
+            WaterGroundSurface: city:WaterGroundSurface
+            WaterClosureSurface: city:WaterClosureSurface
+            TrafficArea: city:TrafficArea
+            AuxiliaryTrafficArea: city:AuxiliaryTrafficArea
+            TransportationHole: city:TransportationHole
+            TransportationMarking: city:TransportationMarking
+
+            # Appearance Objects
+            Material: city:Material
+            Texture: city:Texture
+
+            lod:
+              '@id': city:lod
+            surfaces: city:hasSurface
+            boundaries:
+              '@id': city:boundaries
+              '@container': '@list'
+              '@type': '@id'
+        attributes: '@nest'
+        parents:
+          '@id': city:hasParent
+          '@type': '@id'
+        children:
+          '@id': city:hasChild
+          '@type': '@id'
+
+    'city:x':
+      '@id': city:x
+      '@type': xsd:decimal
+    'city:y':
+      '@id': city:y
+      '@type': xsd:decimal
+    'city:z':
+      '@id': city:z
+      '@type': xsd:decimal
+
+    transform:
+      '@id': city:hasTransform
+      '@context':
+        scale: city:scale
+        translate: city:translate
+
+    metadata:
+      '@id': '@nest'
+      '@context':
+        identifier: dct:identifier
+    geographicalExtent: city:geographicalExtent
+
+    vertices: city:hasVertex
+
+    extensions:
+      '@id': city:hasExtension
+      '@container': '@index'
+      '@index': dct:identifier
+      '@context':
+        url: '@id'
+        version: dct:version
