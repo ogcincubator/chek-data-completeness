@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Response
+from fastapi import FastAPI, Request, HTTPException, Response, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 
 from app import model
@@ -83,7 +83,8 @@ def view_process(process_id: str) -> model.Process:
 
 
 @app.post('/processes/{process_id}/execution', status_code=201)
-def process_execution(process_id: str, data: model.ValidationExecute, req: Request, resp: Response) -> model.StatusInfo:
+def process_execution(process_id: str, data: model.ValidationExecute, req: Request, resp: Response,
+                      background_tasks: BackgroundTasks) -> model.StatusInfo:
     profile = app.profile_loader.profiles.get(process_id)
 
     if not profile:
@@ -97,7 +98,7 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
 
     job = job_executor.create_job(city_files=data.inputs.cityFiles)
     job_id = job.job_id
-    job.execute_sync([profile])
+    background_tasks.add_task(job.execute_sync, [profile])
 
     resp.headers['Location'] = str(req.url_for('view_job', job_id=job_id))
     resp.headers['Preference-Applied'] = 'async-execute'

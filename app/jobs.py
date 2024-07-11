@@ -99,12 +99,16 @@ class Job:
                 path = city_file.path
                 # 2. Check geometry with val3dity
                 report_fn = path.with_name(path.stem + '-val3dity.json')
-                subprocess.run([
-                    settings.val3dity,
-                    '--report',
-                    str(report_fn),
-                    str(path),
-                ])
+                subprocess.run(
+                    [
+                        settings.val3dity,
+                        '--report',
+                        str(report_fn),
+                        str(path),
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
                 with open(report_fn) as f:
                     val3dity_report = json.load(f)
                 self.val3dity_result = self.val3dity_result and val3dity_report['validity']
@@ -112,18 +116,22 @@ class Job:
 
                 # 3. Uplift
                 ttl_file = path.with_name(path.stem + '-uplift.ttl')
-                subprocess.run([
-                    'python',
-                    '-m',
-                    'ogc.na.ingest_json',
-                    '--no-provenance',
-                    '--ttl',
-                    '--ttl-file',
-                    str(ttl_file),
-                    '--context',
-                    './data/cityjson-uplift.yml',
-                    str(path),
-                ])
+                subprocess.run(
+                    [
+                        'python',
+                        '-m',
+                        'ogc.na.ingest_json',
+                        '--no-provenance',
+                        '--ttl',
+                        '--ttl-file',
+                        str(ttl_file),
+                        '--context',
+                        './data/cityjson-uplift.yml',
+                        str(path),
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
 
                 # 4. Append variables
                 # TODO
