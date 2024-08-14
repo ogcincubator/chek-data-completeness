@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, Set
 
 from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, Field, PositiveFloat, conint, RootModel, BaseConfig
@@ -279,6 +280,9 @@ class InputFile(Model):
     name: str
     data_str: str
 
+    def write_to(self, path: Path):
+        with open(path, 'w') as f:
+            f.write(self.data_str)
 
 class ValidationInputs(Model):
     class Config:

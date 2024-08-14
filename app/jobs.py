@@ -3,13 +3,14 @@ import json
 import re
 from collections import deque
 from pathlib import Path
+from subprocess import CalledProcessError
 from typing import List, Any
 
 from ogc.na.ingest_json import uplift_json
 from pyld import jsonld
 from rdflib import Graph
 
-from app import model
+from app import model, util
 from app.profiles import Profile, ProfileLoader
 from app.config import settings
 import uuid
@@ -45,6 +46,7 @@ SHACL_RESULT_FRAME = json.loads('''
 @dataclasses.dataclass
 class FileResult:
     path: Path
+    is_cityjson: True
     input_file: model.InputFile
     val3dity_report: Any = None
     shacl_report: Any = None
@@ -70,13 +72,18 @@ class Job:
         self.city_files: list[FileResult] = []
 
         for i, city_file in enumerate(city_files):
-            # TODO: CityGML support
             output_fn = self.wd / f"input_city.{i}.json"
-            with open(output_fn, 'w') as f:
-                f.write(city_file.data_str)
+            is_cityjson = True
+            if util.is_xml(city_file.data_str):
+                # Convert to CityJSON
+                output_fn = output_fn.with_suffix('.gml')
+                is_cityjson = False
+
+            city_file.write_to(output_fn)
             self.city_files.append(FileResult(
                 path=output_fn,
                 input_file=city_file,
+                is_cityjson=is_cityjson,
             ))
 
     def clean(self):
@@ -119,11 +126,30 @@ class Job:
             shacl_graph.serialize(shacl_filename)
 
             # 2. Convert to CityJSON
-            # TODO
+            for city_file in self.city_files:
+                if not city_file.is_cityjson:
+                    subprocess_result = subprocess.run(
+                        [
+                            settings.citygml_tools,
+                            'to-cityjson',
+                            str(city_file.path),
+                        ],
+                        capture_output=True,
+                        text=True,
+                    )
+                    try:
+                        subprocess_result.check_returncode()
+                    except CalledProcessError as e:
+                        errors = subprocess_result.stderr
+                        errors += '\n'.join(l for l in subprocess_result.stdout.splitlines() if 'ERROR]' in l)
+                        raise Exception(f"Error converting input file to CityJSON: {errors}") from e
+                    city_file.path = city_file.path.with_suffix('.json')
+                    city_file.is_cityjson = True
 
+            # 3. Run validation
             for city_file in self.city_files:
                 path = city_file.path
-                # 2. Check geometry with val3dity
+                # 3.1 val3dity
                 report_fn = path.with_name(path.stem + '-val3dity.json')
                 subprocess.run(
                     [
@@ -134,13 +160,13 @@ class Job:
                     ],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
-                )
+                ).check_returncode()
                 with open(report_fn) as f:
                     val3dity_report = json.load(f)
                 self.val3dity_result = self.val3dity_result and val3dity_report['validity']
                 city_file.val3dity_report = val3dity_report
 
-                # 3. Uplift
+                # 3.2 Uplift
                 ttl_file = path.with_name(path.stem + '-uplift.ttl')
                 subprocess.run(
                     [
@@ -159,10 +185,10 @@ class Job:
                     stderr=subprocess.DEVNULL,
                 )
 
-                # 4. Append variables
+                # 3.3. Append variables
                 # TODO
 
-                # 5. Validate
+                # 3.4. SHACL
                 shacl_output = path.with_name(path.stem + '-shacl-result.txt')
                 shacl_process = subprocess.run([
                     'pyshacl',
