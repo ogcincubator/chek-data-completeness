@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import re
+from collections import deque
 from pathlib import Path
 from typing import List, Any
 
@@ -9,7 +10,7 @@ from pyld import jsonld
 from rdflib import Graph
 
 from app import model
-from app.profiles import Profile
+from app.profiles import Profile, ProfileLoader
 from app.config import settings
 import uuid
 import shutil
@@ -52,12 +53,16 @@ class FileResult:
 
 class Job:
 
-    def __init__(self, job_id: str, city_files: list[model.InputFile]):
+    def __init__(self, job_id: str, city_files: list[model.InputFile],
+                 profile_loader: ProfileLoader | None = None):
         self.job_id = job_id
         self.status = model.StatusCode.accepted
         self.errors = []
+        self.warnings = []
         self.wd = Path(settings.temp_dir, self.job_id)
         self.wd.mkdir(exist_ok=False, parents=True)
+
+        self.profile_loader = profile_loader
 
         self.val3dity_result = True
         self.shacl_result = True
@@ -80,15 +85,36 @@ class Job:
     def execute_sync(self, profiles: List[Profile]):
 
         self.status = model.StatusCode.running
+
+        loaded_profile_uris = set()
+        pending_profiles = deque(profiles)
+
         try:
             # 1. Fetch SHACL rules
             shacl_graph = Graph()
-            # TODO: isProfileOf
-            for profile in profiles:
+            while pending_profiles:
+                profile = pending_profiles.popleft()
                 for resource in profile.resources:
                     for artifact in resource.artifacts:
                         public_id = 'urn:check:shacl/doc' if not re.match(r'^https?://', artifact) else artifact
                         shacl_graph.parse(artifact, publicID=public_id)
+                for profile_of_uri in profile.profileOf:
+                    if profile_of_uri in loaded_profile_uris or profile_of_uri in ('urn:chek:profiles/chek',
+                                                                                   'chekp:chek'):
+                        continue
+                    profile_of = None
+                    if self.profile_loader:
+                        profile_of = self.profile_loader.profiles_by_uri.get(profile_of_uri)
+                    if profile_of:
+                        pending_profiles.append(profile)
+                    else:
+                        self.warnings.append({
+                            'type': 'ProfileNotFound',
+                            'uri': profile_of_uri,
+                            'message': f"Profile {profile_of_uri} not found",
+                        })
+                loaded_profile_uris.add(profile.uri)
+
             shacl_filename = self.wd / "shacl.ttl"
             shacl_graph.serialize(shacl_filename)
 
@@ -172,9 +198,9 @@ class JobExecutor:
     def __init__(self):
         self.jobs: dict[str, Job] = {}
 
-    def create_job(self, city_files: list[model.InputFile]):
+    def create_job(self, city_files: list[model.InputFile], profile_loader: ProfileLoader | None = None):
         job_id = str(uuid.uuid4())
-        job = Job(job_id, city_files)
+        job = Job(job_id, city_files, profile_loader=profile_loader)
         self.jobs[job_id] = job
 
         # Remove old jobs

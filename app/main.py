@@ -96,7 +96,7 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
                 title='Process not found',
             ).dict(exclude_none=True))
 
-    job = job_executor.create_job(city_files=data.inputs.cityFiles)
+    job = job_executor.create_job(city_files=data.inputs.cityFiles, profile_loader=app.profile_loader)
     job_id = job.job_id
     background_tasks.add_task(job.execute_sync, [profile])
 
@@ -158,7 +158,8 @@ def job_results(job_id: str):
                     'shaclReport': file_result.shacl_report,
                 }
                 for file_result in job.city_files
-            ]
+            ],
+            'warnings': job.warnings,
         }
 
 

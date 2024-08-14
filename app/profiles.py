@@ -81,7 +81,6 @@ CONSTRUCT {
 LOAD_PROFILES_FRAME = json.loads('''
 {
   "@context": {
-    "checkp": "urn:chek:profiles/",
     "prof": "http://www.w3.org/ns/dx/prof/",
     "sd": "https://w3id.org/okn/o/sd#",
     "dct": "http://purl.org/dc/terms/",
@@ -123,7 +122,7 @@ LOAD_PROFILES_FRAME = json.loads('''
       "@type": "@id"
     }
   },
-  "@type": "checkp:Profile",
+  "@type": "urn:chek:profiles/Profile",
   "resources": {},
   "parameters": {}
 }
@@ -204,6 +203,7 @@ class ProfileLoader:
 
     def __init__(self, source: str):
         self.profiles: dict[str, Profile] = {}
+        self.profiles_by_uri: dict[str, Profile] = {}
         self.profile_shacl: dict[str, Graph] = {}
 
         self._is_sparql = source.startswith('sparql:')
@@ -242,8 +242,10 @@ class ProfileLoader:
             profiles_obj = [profiles_obj]
 
         profiles = parse_obj_as(List[Profile], profiles_obj)
+
         self.profiles = {profile.get_id(): profile
                          for profile in sorted(profiles, key=lambda x: (x.token, x.uri))}
+        self.profiles_by_uri = {profile.uri: profile for profile in profiles}
 
         self._schedule_reload()
 
