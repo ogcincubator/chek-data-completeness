@@ -146,21 +146,24 @@ def job_results(job_id: str):
             'errors': [str(e) for e in job.errors],
         }
     else:
-        return {
+        result = {
             'valid': job.valid,
             'val3dityResult': job.val3dity_result,
             'shaclResult': job.shacl_result,
-            'validation': [
+            'shaclReport': job.shacl_report,
+            'fileValidation': [
                 {
+                    'fileIndex': file_result.index,
                     'name': file_result.input_file.name,
                     'valid': file_result.valid,
                     'val3dityReport': file_result.val3dity_report,
-                    'shaclReport': file_result.shacl_report,
                 }
                 for file_result in job.city_files
             ],
-            'warnings': job.warnings,
         }
+        if job.warnings:
+            result['warnings'] = job.warnings
+        return result
 
 
 @app.get('/profiles')

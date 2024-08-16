@@ -3,7 +3,6 @@ import json
 import re
 from collections import deque
 from pathlib import Path
-from subprocess import CalledProcessError
 from typing import List, Any
 
 from ogc.na.ingest_json import uplift_json
@@ -45,11 +44,11 @@ SHACL_RESULT_FRAME = json.loads('''
 
 @dataclasses.dataclass
 class FileResult:
+    index: int
     path: Path
     is_cityjson: True
     input_file: model.InputFile
     val3dity_report: Any = None
-    shacl_report: Any = None
     valid: bool = True
 
 
@@ -68,6 +67,7 @@ class Job:
 
         self.val3dity_result = True
         self.shacl_result = True
+        self.shacl_report = ''
 
         self.city_files: list[FileResult] = []
 
@@ -81,6 +81,7 @@ class Job:
 
             city_file.write_to(output_fn)
             self.city_files.append(FileResult(
+                index=i,
                 path=output_fn,
                 input_file=city_file,
                 is_cityjson=is_cityjson,
@@ -137,16 +138,17 @@ class Job:
                         capture_output=True,
                         text=True,
                     )
-                    try:
-                        subprocess_result.check_returncode()
-                    except CalledProcessError as e:
+                    if subprocess_result.returncode:
                         errors = subprocess_result.stderr
-                        errors += '\n'.join(l for l in subprocess_result.stdout.splitlines() if 'ERROR]' in l)
-                        raise Exception(f"Error converting input file to CityJSON: {errors}") from e
+                        errors += '\n'.join(line
+                                            for line in subprocess_result.stdout.splitlines()
+                                            if 'ERROR]' in line)
+                        raise Exception(f"Error converting input file {city_file.index} to CityJSON: {errors}")
                     city_file.path = city_file.path.with_suffix('.json')
                     city_file.is_cityjson = True
 
             # 3. Run validation
+            ttl_files = []
             for city_file in self.city_files:
                 path = city_file.path
                 # 3.1 val3dity
@@ -168,11 +170,13 @@ class Job:
 
                 # 3.2 Uplift
                 ttl_file = path.with_name(path.stem + '-uplift.ttl')
-                subprocess.run(
+                subprocess_result = subprocess.run(
                     [
                         'python',
                         '-m',
                         'ogc.na.ingest_json',
+                        '--transform-arg',
+                        f'file_idx={city_file.index}',
                         '--no-provenance',
                         '--ttl',
                         '--ttl-file',
@@ -181,30 +185,37 @@ class Job:
                         './data/cityjson-uplift.yml',
                         str(path),
                     ],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
                 )
+                if subprocess_result.returncode:
+                    raise Exception(f"Error converting input file {city_file.index} to RDF: {subprocess_result.stdout}")
 
-                # 3.3. Append variables
-                # TODO
+                ttl_files.append(ttl_file)
 
-                # 3.4. SHACL
-                shacl_output = path.with_name(path.stem + '-shacl-result.txt')
-                shacl_process = subprocess.run([
-                    'pyshacl',
-                    '-s',
-                    str(shacl_filename),
-                    '-f',
-                    'json-ld',
-                    '-o',
-                    str(shacl_output),
-                    str(ttl_file),
-                ])
-                self.shacl_result = self.shacl_result and shacl_process.returncode == 0
-                with open(shacl_output) as f:
-                    city_file.shacl_report = jsonld.frame(json.load(f), SHACL_RESULT_FRAME)
+            # 4. Append variables
+            # TODO
 
-                city_file.valid = val3dity_report['validity'] and shacl_process.returncode == 0
+            # 5. Concatenate TTL files
+            output_ttl_file = self.wd / 'city.ttl'
+            util.concat_files(ttl_files, output_ttl_file)
+
+            # 5. SHACL
+            shacl_output = output_ttl_file.with_name('city-shacl-result.json')
+            shacl_process = subprocess.run([
+                'pyshacl',
+                '-s',
+                str(shacl_filename),
+                '-f',
+                'json-ld',
+                '-o',
+                str(shacl_output),
+                str(output_ttl_file),
+            ])
+            self.shacl_result = shacl_process.returncode == 0
+            with open(shacl_output) as f:
+                self.shacl_report = jsonld.frame(json.load(f), SHACL_RESULT_FRAME)
 
             self.status = model.StatusCode.successful
 

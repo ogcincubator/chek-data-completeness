@@ -29,8 +29,8 @@ transform:
   # Add base and prefix for it
   - |
     ."@context" = {
-      "@base": "https://raw.githubusercontent.com/ogcincubator/chek-profiles/master/\($_relname)",
-      "c": "https://raw.githubusercontent.com/ogcincubator/chek-profiles/master/\($_relname)#"
+      "@base": "urn:city-validator:input-files/\($file_idx)/",
+      "c": "urn:city-validator:input-files/\($file_idx)/"
     }
 
 context:
