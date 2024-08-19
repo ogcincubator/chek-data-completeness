@@ -97,7 +97,7 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
                 type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
                 status=404,
                 title='Process not found',
-            ).dict(exclude_none=True))
+            ).model_dump(exclude_none=True))
 
     job = job_executor.create_job(city_files=data.inputs.cityFiles, profile_loader=app.profile_loader)
     job_id = job.job_id

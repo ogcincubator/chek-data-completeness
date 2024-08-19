@@ -13,15 +13,17 @@ from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, Field, PositiveFloat,
 
 
 class Model(BaseModel):
-    class Config(BaseConfig):
-        json_encoders = {
-            BaseModel: lambda x: x.dict(exclude_none=True),
-        }
+    model_config = {
+        'json_encoders': {
+            BaseModel: lambda x: x.model_dump(exclude_unset=True, by_alias=True),
+        },
+    }
 
 
 class Exception(Model):
-    class Config(Model.Config):
-        extra = Extra.allow
+    model_config = {
+        'extra': 'allow',
+    }
 
     type: str
     title: Optional[str] = None
@@ -218,8 +220,9 @@ class Process(ProcessSummary):
 
 class InputDescription(DescriptionType):
 
-    class Config:
-        populate_by_name = True
+    model_config = {
+        'populate_by_name': True
+    }
 
     minOccurs: Optional[int] = 1
     maxOccurs: Optional[Union[int, MaxOccurs]] = None
@@ -227,15 +230,17 @@ class InputDescription(DescriptionType):
 
 
 class OutputDescription(DescriptionType):
-    class Config:
-        populate_by_name = True
+    model_config = {
+        'populate_by_name': True
+    }
 
     schema_: Schema = Field(..., alias='schema')
 
 
 class Schema1(Model):
-    class Config(Model.Config):
-        extra = Extra.forbid
+    model_config = {
+        'extra': 'forbid',
+    }
 
     title: Optional[str] = None
     multipleOf: Optional[PositiveFloat] = None
@@ -291,9 +296,11 @@ class InputFile(Model):
         with open(path, 'w') as f:
             f.write(self.data_str)
 
+
 class ValidationInputs(Model):
-    class Config:
-        extra = Extra.allow
+    model_config = {
+        'extra': 'allow',
+    }
 
     cityFiles: List[InputFile]
 
