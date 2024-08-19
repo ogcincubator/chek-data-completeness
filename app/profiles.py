@@ -6,7 +6,7 @@ from threading import Timer
 from typing import Sequence, List
 from urllib.parse import unquote, urlparse
 
-from pydantic import parse_obj_as, RootModel, field_serializer
+from pydantic import parse_obj_as, RootModel, field_serializer, TypeAdapter
 from pyld import jsonld
 from rdflib import Graph
 
@@ -16,32 +16,26 @@ from app.model import Model
 RELOAD_TIME = 60 * 5
 
 COMMON_INPUTS = {
-    'city_file': model.InputDescription(
+    'cityFiles': model.InputDescription(
         title='Input data file',
         description='Input data file (CityJSON or CityGML)',
         minOccurs=1,
         maxOccurs=model.MaxOccurs.unbounded,
         schema=model.Schema(
-            type='string',
-            contentEncoding='binary',
-            oneOf=[
-                model.Schema(contentMediaType='application/city+json'),
-                model.Schema(contentMediaType='application/gml+xml'),
-            ],
-        ),
-    ),
-    'city_file_base64': model.InputDescription(
-        title='Input data file in base64 format',
-        description='Input data file (CityJSON or CityGML) in base64 format',
-        minOccurs=1,
-        maxOccurs=model.MaxOccurs.unbounded,
-        schema=model.Schema(
-            type='string',
-            contentEncoding='binary',
-            oneOf=[
-                model.Schema(contentMediaType='application/city+json'),
-                model.Schema(contentMediaType='application/gml+xml'),
-            ],
+            type='object',
+            properties={
+                'name': model.Schema(
+                    type='string',
+                    description='Name or alias for this file',
+                ),
+                'data_str': model.Schema(
+                    type='string',
+                    description='Data string for this file (CityJSON or CityGML)',
+                )
+            },
+            required={
+                'data_str',
+            }
         ),
     ),
 }
@@ -52,6 +46,7 @@ PREFIX dct:  <http://purl.org/dc/terms/>
 PREFIX prof: <http://www.w3.org/ns/dx/prof/>
 PREFIX sd: <https://w3id.org/okn/o/sd#>
 PREFIX role: <http://www.w3.org/ns/dx/prof/role/>
+PREFIX hydra: <http://www.w3.org/ns/hydra/core#>
 CONSTRUCT {
 } WHERE {
   SERVICE <__SERVICE__> {
@@ -73,6 +68,7 @@ CONSTRUCT {
       ?param dct:identifier ?identifier ;
           sd:hasDataType ?dataType .
       OPTIONAL { ?param dct:description ?description }
+      OPTIONAL { ?param hydra:required ?required }
     }
   }
 }
@@ -84,12 +80,14 @@ LOAD_PROFILES_FRAME = json.loads('''
     "prof": "http://www.w3.org/ns/dx/prof/",
     "sd": "https://w3id.org/okn/o/sd#",
     "dct": "http://purl.org/dc/terms/",
+    "hydra": "http://www.w3.org/ns/hydra/core#",
     "uri": "@id",
     "title": "dct:title",
     "description": "dct:description",
     "identifier": "dct:identifier",
     "dataType": "sd:hasDataType",
     "version": "dct:version",
+    "required": "hydra:required",
     "parameters": {
       "@id": "sd:hasParameter",
       "@container": "@set"
@@ -146,6 +144,7 @@ class Parameter(Model):
     identifier: str
     description: str | None
     dataType: str
+    required: bool = False
 
 
 class Profile(Model):
@@ -182,16 +181,16 @@ class Profile(Model):
                 param.identifier: model.InputDescription(
                     title=param.identifier,
                     description=param.description,
-                    minOccurs=1,
+                    minOccurs=1 if param.required else 0,
                     maxOccurs=1,
                     schema=model.Schema(
                         type=param.dataType,
                     ),
                 ) for param in self.parameters
-            }
+            },
         }
         return model.Process(
-            **self.to_process_summary().dict(),
+            **self.to_process_summary().model_dump(by_alias=True),
             inputs=inputs,
         )
 
@@ -241,7 +240,7 @@ class ProfileLoader:
         else:
             profiles_obj = [profiles_obj]
 
-        profiles = parse_obj_as(List[Profile], profiles_obj)
+        profiles = TypeAdapter(List[Profile]).validate_python(profiles_obj)
 
         self.profiles = {profile.get_id(): profile
                          for profile in sorted(profiles, key=lambda x: (x.token, x.uri))}

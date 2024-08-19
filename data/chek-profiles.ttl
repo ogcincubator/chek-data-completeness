@@ -6,6 +6,7 @@
 @prefix role: <http://www.w3.org/ns/dx/prof/role/> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix sd: <https://w3id.org/okn/o/sd#> .
+@prefix hydra: <http://www.w3.org/ns/hydra/core#> .
 
 chekp:dummy a prof:Profile, chekp:Profile ;
   dct:title "Dummy profile with no rules" ;
@@ -30,5 +31,6 @@ chekp:ascoli-piceno a prof:Profile, chekp:Profile ;
     dct:identifier "pointOfInterest" ;
     dct:description "Central point of interest (e.g., location of building of interest) for validation" ;
     sd:hasDataType "string" ;
+    hydra:required false ;
   ] ;
 .

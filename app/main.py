@@ -78,8 +78,11 @@ def view_process(process_id: str) -> model.Process:
                 type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-process",
                 status=404,
                 title='Process not found',
-            ).dict(exclude_none=True))
-    return profile.to_process_description()
+            ).model_dump(exclude_none=True))
+
+    process_description = profile.to_process_description()
+
+    return process_description.model_dump(by_alias=True, exclude_unset=True)
 
 
 @app.post('/processes/{process_id}/execution', status_code=201)

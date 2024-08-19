@@ -217,12 +217,19 @@ class Process(ProcessSummary):
 
 
 class InputDescription(DescriptionType):
+
+    class Config:
+        populate_by_name = True
+
     minOccurs: Optional[int] = 1
     maxOccurs: Optional[Union[int, MaxOccurs]] = None
     schema_: Schema = Field(..., alias='schema')
 
 
 class OutputDescription(DescriptionType):
+    class Config:
+        populate_by_name = True
+
     schema_: Schema = Field(..., alias='schema')
 
 
@@ -233,17 +240,17 @@ class Schema1(Model):
     title: Optional[str] = None
     multipleOf: Optional[PositiveFloat] = None
     maximum: Optional[float] = None
-    exclusiveMaximum: Optional[bool] = False
+    exclusiveMaximum: Optional[bool] = None
     minimum: Optional[float] = None
-    exclusiveMinimum: Optional[bool] = False
+    exclusiveMinimum: Optional[bool] = None
     maxLength: Optional[conint(ge=0)] = None
-    minLength: Optional[conint(ge=0)] = 0
+    minLength: Optional[conint(ge=0)] = None
     pattern: Optional[str] = None
     maxItems: Optional[conint(ge=0)] = None
-    minItems: Optional[conint(ge=0)] = 0
-    uniqueItems: Optional[bool] = False
+    minItems: Optional[conint(ge=0)] = None
+    uniqueItems: Optional[bool] = None
     maxProperties: Optional[conint(ge=0)] = None
-    minProperties: Optional[conint(ge=0)] = 0
+    minProperties: Optional[conint(ge=0)] = None
     required: Optional[Set[str]] = Field(None, min_length=1)
     enum: Optional[Set[Dict[str, Any]]] = Field(None, min_length=1)
     type: Optional[Type1] = None
@@ -253,15 +260,15 @@ class Schema1(Model):
     anyOf: Optional[List[Union[Schema, Reference]]] = None
     items: Optional[Union[Schema, Reference]] = None
     properties: Optional[Dict[str, Union[Schema, Reference]]] = None
-    additionalProperties: Optional[Union[Schema, Reference, bool]] = True
+    additionalProperties: Optional[Union[Schema, Reference, bool]] = None
     description: Optional[str] = None
     format: Optional[str] = None
     default: Optional[Dict[str, Any]] = None
-    nullable: Optional[bool] = False
-    readOnly: Optional[bool] = False
-    writeOnly: Optional[bool] = False
+    nullable: Optional[bool] = None
+    readOnly: Optional[bool] = None
+    writeOnly: Optional[bool] = None
     example: Optional[Dict[str, Any]] = None
-    deprecated: Optional[bool] = False
+    deprecated: Optional[bool] = None
     contentMediaType: Optional[str] = None
     contentEncoding: Optional[str] = None
     contentSchema: Optional[str] = None
