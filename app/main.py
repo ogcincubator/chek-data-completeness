@@ -101,7 +101,9 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
 
     job = job_executor.create_job(city_files=data.inputs.cityFiles, profile_loader=app.profile_loader)
     job_id = job.job_id
-    background_tasks.add_task(job.execute_sync, [profile])
+
+    parameters = {k: v for k, v in data.inputs.model_dump().items() if k != 'cityFiles'}
+    background_tasks.add_task(job.execute_sync, [profile], parameters=parameters)
 
     resp.headers['Location'] = str(req.url_for('view_job', job_id=job_id))
     resp.headers['Preference-Applied'] = 'async-execute'

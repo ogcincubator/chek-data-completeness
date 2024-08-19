@@ -5,9 +5,8 @@ from collections import deque
 from pathlib import Path
 from typing import List, Any
 
-from ogc.na.ingest_json import uplift_json
 from pyld import jsonld
-from rdflib import Graph
+from rdflib import Graph, BNode, RDF, Namespace, DCTERMS, Literal
 
 from app import model, util
 from app.profiles import Profile, ProfileLoader
@@ -41,6 +40,8 @@ SHACL_RESULT_FRAME = json.loads('''
 }
 ''')
 
+SD = Namespace('https://w3id.org/okn/o/sd#')
+
 
 @dataclasses.dataclass
 class FileResult:
@@ -60,7 +61,7 @@ class Job:
         self.status = model.StatusCode.accepted
         self.errors = []
         self.warnings = []
-        self.wd = Path(settings.temp_dir, self.job_id)
+        self.wd = Path(settings.temp_dir, self.job_id[0:2], self.job_id)
         self.wd.mkdir(exist_ok=False, parents=True)
 
         self.profile_loader = profile_loader
@@ -90,7 +91,8 @@ class Job:
     def clean(self):
         shutil.rmtree(self.wd)
 
-    def execute_sync(self, profiles: List[Profile]):
+    def execute_sync(self, profiles: List[Profile],
+                     parameters: dict[str, str | int | float | bool] = None):
 
         self.status = model.StatusCode.running
 
@@ -195,7 +197,17 @@ class Job:
                 ttl_files.append(ttl_file)
 
             # 4. Append variables
-            # TODO
+            if parameters:
+                param_g = Graph()
+                param_g.bind('sd', SD)
+                for k, v in parameters.items():
+                    param_node = BNode()
+                    param_g.add((param_node, RDF.type, SD.Parameter))
+                    param_g.add((param_node, DCTERMS.identifier, Literal(k)))
+                    param_g.add((param_node, SD.hasFixedValue, Literal(v)))
+                param_ttl_file = self.wd / 'shacl-params.ttl'
+                param_g.serialize(param_ttl_file)
+                ttl_files.append(param_ttl_file)
 
             # 5. Concatenate TTL files
             output_ttl_file = self.wd / 'city.ttl'

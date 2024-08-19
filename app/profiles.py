@@ -175,7 +175,7 @@ class Profile(Model):
         )
 
     def to_process_description(self) -> model.Process:
-        inputs = {
+        inputs: dict[str, model.InputDescription] = {
             **COMMON_INPUTS,
             **{
                 param.identifier: model.InputDescription(
@@ -192,6 +192,7 @@ class Profile(Model):
         return model.Process(
             **self.to_process_summary().model_dump(by_alias=True),
             inputs=inputs,
+            # TODO: outputs
         )
 
 

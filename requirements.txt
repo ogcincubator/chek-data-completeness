@@ -1,5 +1,5 @@
 fastapi[all]==0.111.0
-rdflib
+rdflib @ git+https://github.com/avillar/rdflib@6.x#egg=rdflib
 pyld
 pydantic-settings
 pyshacl
