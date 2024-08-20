@@ -48,6 +48,13 @@ docker run -p 8080:8080 ghcr.io/ogcincubator/chek-data-completeness
 
 The service will be available at https://localhost:8080.
 
+If you need to serve the application from a path other than `/`, you can pass it as the `ROOT_PATH` environment
+variable:
+
+```
+docker run -p 8080:8080 -e ROOT_PATH=/my-subpath/ ghcr.io/ogcincubator/chek-data-completeness
+```
+
 ## Configuration
 
 The application can be configured by using environment variables and/or a `.env` file (with the former taking
@@ -201,3 +208,8 @@ POST /processes/my-profile/execution
   }
 }
 ```
+
+## Acknowledgements
+
+The work has been co-funded by the European Union and the United Kingdom under the 
+Horizon Europe [CHEK project](https://www.ogc.org/initiatives/chek/) (GA 101058559).
