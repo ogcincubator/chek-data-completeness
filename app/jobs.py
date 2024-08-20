@@ -174,7 +174,7 @@ class Job:
                 ttl_file = path.with_name(path.stem + '-uplift.ttl')
                 subprocess_result = subprocess.run(
                     [
-                        'python',
+                        'python3',
                         '-m',
                         'ogc.na.ingest_json',
                         '--transform-arg',

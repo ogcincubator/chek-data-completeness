@@ -1,11 +1,11 @@
-FROM debian:bookworm-slim AS val3dityBuilder
+FROM ubuntu:noble AS val3dity_builder
 
 ARG VAL3DITY_SRC="https://github.com/tudelft3d/val3dity/archive/refs/tags/2.4.0.tar.gz"
 
 WORKDIR /src
 
 RUN apt update \
-    && apt-get install -y build-essential libboost-filesystem1.74-dev libeigen3-dev libgeos++-dev  \
+    && apt-get install -y build-essential libboost-filesystem1.83-dev libeigen3-dev libgeos++-dev  \
       libcgal-dev wget cmake
 
 RUN wget "${VAL3DITY_SRC}" -O val3dity-src.tar.gz \
@@ -17,17 +17,16 @@ RUN wget "${VAL3DITY_SRC}" -O val3dity-src.tar.gz \
     && cmake .. \
     && make
 
-FROM debian:bookworm-slim as runner
+FROM eclipse-temurin:17-noble AS runner
 
 ARG CITYGML_TOOLS="https://github.com/citygml4j/citygml-tools/releases/download/v2.3.0/citygml-tools-2.3.0.zip"
 
-COPY --from=val3dityBuilder /src/val3dity/build/val3dity /usr/bin/val3dity
+COPY --from=val3dity_builder /src/val3dity/build/val3dity /usr/bin/val3dity
 
 WORKDIR /opt
 
 RUN apt update \
-    && apt-get install -y libboost-filesystem1.74 libeigen3-dev libgeos++-dev libcgal-dev openjdk-17-jdk-headless \
-      wget unzip python3-pip git
+    && apt-get install -y libboost-filesystem1.83 libgeos-c1t64 wget unzip python3-pip git
 
 RUN wget "${CITYGML_TOOLS}" -O /tmp/citygml-tools.zip \
     && unzip /tmp/citygml-tools.zip \
@@ -42,7 +41,7 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt --break-system-pack
 COPY data ./data
 COPY app ./app
 
-ENV CITYGML_TOOLS "/opt/citygml-tools/citygml-tools"
-ENV VAL3DITY "/usr/bin/val3dity"
+ENV CITYGML_TOOLS="/opt/citygml-tools/citygml-tools"
+ENV VAL3DITY="/usr/bin/val3dity"
 
 CMD ["fastapi", "run", "app/main.py", "--proxy-headers", "--port", "8080"]

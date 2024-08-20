@@ -43,8 +43,10 @@ You may also create a `.env` file with the [configuration](#configuration) inste
 val3dity and CityGML tools come prepackaged in the Docker image, so no dependencies are required.  
 
 ```
-docker run ghcr.io/ogcincubator/chek-data-completeness
+docker run -p 8080:8080 ghcr.io/ogcincubator/chek-data-completeness
 ```
+
+The service will be available at https://localhost:8080.
 
 ## Configuration
 
@@ -54,6 +56,7 @@ precedence). The following (case-insensitive) configuration variables are availa
 | Variable      | Default value                      | Description                                                                                                                                                   |
 |---------------|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | data_source   | `./data/chek-profiles.ttl`         | Data source for profiles. Can be a path or a URL to a Turtle file containing the definition of the profiles, or a SPARQL endpoint URL prefixed with `sparql:` |
+| python3       | `python3`                          | Path to the Python 3 executable                                                                                                                               |
 | val3dity      | `/opt/val3dity/val3dity`           | Path to [val3dity](https://github.com/tudelft3d/val3dity/) executable                                                                                         |
 | citygml_tools | `/opt/citygml-tools/citygml-tools` | Path to [CityGML tools](https://github.com/citygml4j/citygml-tools) executable                                                                                |
 | temp_dir      | `./tmp`                            | Directory where temporary files will be stored                                                                                                                |
