@@ -43,7 +43,7 @@ You may also create a `.env` file with the [configuration](#configuration) inste
 val3dity and CityGML tools come prepackaged in the Docker image, so no dependencies are required.  
 
 ```
-docker run dockerogc/chek-data-completeness
+docker run ghcr.io/ogcincubator/chek-data-completeness
 ```
 
 ## Configuration
