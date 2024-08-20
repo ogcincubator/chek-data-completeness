@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException, Response, BackgroundTasks
-from fastapi.encoders import jsonable_encoder
+from contextlib import asynccontextmanager
 
 from app import model
 from app.config import settings
@@ -12,21 +12,24 @@ app_metadata = {
     'version': '0.1',
 }
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.profile_loader = ProfileLoader(settings.data_source)
+    yield
+    app.profile_loader.close()
+
+
 app = FastAPI(
-    **app_metadata
+    **app_metadata,
+    lifespan=lifespan,
 )
+
+
 
 app.profile_loader = None
 
 
-@app.on_event("startup")
-def initialize():
-    app.profile_loader = ProfileLoader(settings.data_source)
-
-
-@app.on_event("shutdown")
-def shutdown():
-    app.profile_loader.close()
 
 
 @app.get('/')
@@ -130,7 +133,7 @@ def view_job(job_id: str) -> model.StatusInfo:
                 type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
                 status=404,
                 title='Job not found',
-            ).dict(exclude_none=True))
+            ).model_dump(exclude_none=True))
     return model.StatusInfo(
         processID=','.join(p.get_id() for p in job.profiles),
         jobID=job_id,
