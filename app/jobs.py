@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import json
 import re
 from collections import deque
@@ -56,7 +57,14 @@ class FileResult:
 class Job:
 
     def __init__(self, job_id: str, city_files: list[model.InputFile],
+                 profiles: List[Profile],
+                 parameters: dict[str, str | int | float | bool] = None,
                  profile_loader: ProfileLoader | None = None):
+
+        self.created = datetime.datetime.now(datetime.timezone.utc)
+        self.started = None
+        self.finished = None
+
         self.job_id = job_id
         self.status = model.StatusCode.accepted
         self.errors = []
@@ -70,6 +78,8 @@ class Job:
         self.shacl_result = True
         self.shacl_report = ''
 
+        self.profiles = profiles
+        self.parameters = parameters
         self.city_files: list[FileResult] = []
 
         for i, city_file in enumerate(city_files):
@@ -91,13 +101,14 @@ class Job:
     def clean(self):
         shutil.rmtree(self.wd)
 
-    def execute_sync(self, profiles: List[Profile],
-                     parameters: dict[str, str | int | float | bool] = None):
+    def execute_sync(self):
+
+        self.started = datetime.datetime.now(datetime.timezone.utc)
 
         self.status = model.StatusCode.running
 
         loaded_profile_uris = set()
-        pending_profiles = deque(profiles)
+        pending_profiles = deque(self.profiles)
 
         try:
             # 1. Fetch SHACL rules
@@ -197,10 +208,10 @@ class Job:
                 ttl_files.append(ttl_file)
 
             # 4. Append variables
-            if parameters:
+            if self.parameters:
                 param_g = Graph()
                 param_g.bind('sd', SD)
-                for k, v in parameters.items():
+                for k, v in self.parameters.items():
                     param_node = BNode()
                     param_g.add((param_node, RDF.type, SD.Parameter))
                     param_g.add((param_node, DCTERMS.identifier, Literal(k)))
@@ -237,6 +248,9 @@ class Job:
             self.errors.append(e)
             self.status = model.StatusCode.failed
 
+        finally:
+            self.finished = datetime.datetime.now(datetime.timezone.utc)
+
     @property
     def valid(self):
         return len(self.errors) == 0 and self.shacl_result and self.val3dity_result
@@ -247,9 +261,12 @@ class JobExecutor:
     def __init__(self):
         self.jobs: dict[str, Job] = {}
 
-    def create_job(self, city_files: list[model.InputFile], profile_loader: ProfileLoader | None = None):
+    def create_job(self, city_files: list[model.InputFile],
+                   profiles: List[Profile],
+                   parameters: dict[str, str | int | float | bool] = None,
+                   profile_loader: ProfileLoader | None = None):
         job_id = str(uuid.uuid4())
-        job = Job(job_id, city_files, profile_loader=profile_loader)
+        job = Job(job_id, city_files, profiles=profiles, parameters=parameters, profile_loader=profile_loader)
         self.jobs[job_id] = job
 
         # Remove old jobs

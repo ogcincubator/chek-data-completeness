@@ -99,11 +99,13 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
                 title='Process not found',
             ).model_dump(exclude_none=True))
 
-    job = job_executor.create_job(city_files=data.inputs.cityFiles, profile_loader=app.profile_loader)
-    job_id = job.job_id
-
     parameters = {k: v for k, v in data.inputs.model_dump().items() if k != 'cityFiles'}
-    background_tasks.add_task(job.execute_sync, [profile], parameters=parameters)
+    job = job_executor.create_job(city_files=data.inputs.cityFiles,
+                                  profiles=[profile],
+                                  parameters=parameters,
+                                  profile_loader=app.profile_loader)
+    job_id = job.job_id
+    background_tasks.add_task(job.execute_sync)
 
     resp.headers['Location'] = str(req.url_for('view_job', job_id=job_id))
     resp.headers['Preference-Applied'] = 'async-execute'
@@ -112,6 +114,9 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
         jobID=job_id,
         status=job.status,
         type=model.Type.process,
+        created=job.created,
+        started=job.started,
+        finished=job.finished,
     )
 
 
@@ -127,9 +132,13 @@ def view_job(job_id: str) -> model.StatusInfo:
                 title='Job not found',
             ).dict(exclude_none=True))
     return model.StatusInfo(
+        processID=','.join(p.get_id() for p in job.profiles),
         jobID=job_id,
         status=job.status,
         type=model.Type.process,
+        created=job.created,
+        started=job.started,
+        finished=job.finished,
     )
 
 

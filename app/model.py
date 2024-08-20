@@ -148,7 +148,7 @@ class StatusInfo(Model):
     finished: Optional[datetime] = None
     updated: Optional[datetime] = None
     progress: Optional[conint(ge=0, le=100)] = None
-    links: Optional[List[Link]] = None
+    links: List[Link] = []
 
 
 class Output(Model):
