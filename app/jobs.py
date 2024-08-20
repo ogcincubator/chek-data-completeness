@@ -203,7 +203,7 @@ class Job:
                     text=True,
                 )
                 if subprocess_result.returncode:
-                    raise Exception(f"Error converting input file {city_file.index} to RDF: {subprocess_result.stdout}")
+                    raise Exception(f"Error converting input file {city_file.index} to RDF")
 
                 ttl_files.append(ttl_file)
 

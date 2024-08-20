@@ -1,10 +1,19 @@
-from fastapi import FastAPI, Request, HTTPException, Response, BackgroundTasks
 from contextlib import asynccontextmanager
+from typing import Annotated, Union
 
-from app import model
+from fastapi import FastAPI, Request, HTTPException, Response, BackgroundTasks, Header
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+
+from app import model, util
 from app.config import settings
 from app.jobs import job_executor
 from app.profiles import ProfileLoader, ProfileList
+
+MEDIA_TEXT_HTML = 'text/html'
+MEDIA_APPLICATION_JSON = 'application/json'
+MEDIA_ANY = '*/*'
 
 app_metadata = {
     'title': 'CHEK data completeness service',
@@ -25,15 +34,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
+templates = Jinja2Templates(directory="templates")
 
 app.profile_loader = None
 
 
+@app.get('/', response_model=model.LandingPage)
+def capabilities(req: Request, accept: Annotated[str | None, Header()] = None) -> model.LandingPage | HTMLResponse:
+    req_media_type = util.match_accept_header(accept, [MEDIA_TEXT_HTML, MEDIA_APPLICATION_JSON])
 
+    if req_media_type is None:
+        raise HTTPException(
+            status_code=400,
+            detail=model.Exception(
+                type='UnsupportedMediaType',
+                status=400,
+                title='Unsupported media type',
+            ).model_dump(exclude_none=True))
 
-@app.get('/')
-def capabilities(req: Request) -> model.LandingPage:
+    if req_media_type == MEDIA_TEXT_HTML:
+        return templates.TemplateResponse(request=req, name='index.j2')
+
     return model.LandingPage(
         title=app_metadata['title'],
         description=app_metadata['description'],
@@ -155,7 +178,16 @@ def job_results(job_id: str):
                 type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/no-such-job",
                 status=404,
                 title='Job not found',
-            ).dict(exclude_none=True))
+            ).model_dump(exclude_none=True))
+
+    if job.status in (model.StatusCode.running, model.StatusCode.accepted):
+        raise HTTPException(
+            status_code=404,
+            detail=model.Exception(
+                type="http://www.opengis.net/def/exceptions/ogcapi-processes-1/1.0/result-not-ready",
+                status=404,
+                title='Result not ready',
+            ).model_dump(exclude_none=True))
 
     if job.errors:
         return {
