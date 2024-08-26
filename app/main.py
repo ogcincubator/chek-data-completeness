@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Union
 
@@ -40,10 +41,16 @@ templates = Jinja2Templates(directory="templates")
 
 app.profile_loader = None
 
+logger = logging.getLogger('uvicorn.error')
+
 
 @app.get('/', response_model=model.LandingPage)
 def capabilities(req: Request, accept: Annotated[str | None, Header()] = None) -> model.LandingPage | HTMLResponse:
-    req_media_type = util.match_accept_header(accept, [MEDIA_TEXT_HTML, MEDIA_APPLICATION_JSON])
+    try:
+        req_media_type = util.match_accept_header(accept, [MEDIA_TEXT_HTML, MEDIA_APPLICATION_JSON])
+    except Exception as e:
+        req_media_type = MEDIA_TEXT_HTML
+        logger.error(f'Error parsing Accept header "{accept}"', e)
 
     if req_media_type is None:
         raise HTTPException(
