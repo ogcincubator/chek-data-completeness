@@ -51,7 +51,12 @@ class FileResult:
     is_cityjson: True
     input_file: model.InputFile
     val3dity_report: Any = None
-    valid: bool = True
+
+    @property
+    def valid(self):
+        if not self.val3dity_report:
+            return True
+        return self.val3dity_report.get('validity', True)
 
 
 class Job:
