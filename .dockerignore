@@ -1,0 +1,8 @@
+venv
+.venv
+.git
+.github
+tmp
+val3dity.log
+.env.local
+node_modules

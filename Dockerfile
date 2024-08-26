@@ -38,11 +38,10 @@ COPY requirements.txt ./
 
 RUN pip install --no-cache-dir --upgrade -r requirements.txt --break-system-packages
 
-COPY data ./data
-COPY app ./app
+COPY . ./
 
 ENV CITYGML_TOOLS="/opt/citygml-tools/citygml-tools"
 ENV VAL3DITY="/usr/bin/val3dity"
 ENV ROOT_PATH=""
 
-CMD ["bash", "-c", "fastapi run app/main.py --proxy-headers --port 8080 --root-path ${ROOT_PATH%/}"]
+CMD ["bash", "-c", "fastapi run app/main.py --proxy-headers --port 8080 --root-path '${ROOT_PATH%/}'"]
