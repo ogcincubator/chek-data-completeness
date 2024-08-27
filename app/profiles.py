@@ -122,7 +122,8 @@ LOAD_PROFILES_FRAME = json.loads('''
   },
   "@type": "urn:chek:profiles/Profile",
   "resources": {},
-  "parameters": {}
+  "parameters": {},
+  "@embed": "@never"
 }
 ''')
 
