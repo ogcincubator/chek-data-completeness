@@ -173,6 +173,8 @@ class Profile(Model):
             version=self.version,
             title=self.title,
             description=self.description,
+            links=([model.Link(title='Profile of', rel='profileOf', href=p) for p in self.profileOf]
+                    + [model.Link(title='Profile URI', rel='canonical', href=self.uri)]),
         )
 
     def to_process_description(self) -> model.Process:
