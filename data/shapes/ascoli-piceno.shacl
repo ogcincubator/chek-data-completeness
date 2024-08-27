@@ -1,0 +1,106 @@
+@prefix : <urn:chek:profiles/ascoli-piceno#> .
+@prefix chek: <urn:chek:vocab/> .
+
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ex: <http://example.org/> .
+@prefix city: <http://example.com/vocab/city/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+
+ex:
+  a owl:Ontology ;
+  owl:imports sh: ;
+  sh:declare [
+    sh:prefix "city" ;
+    sh:namespace "http://example.com/vocab/city/"^^xsd:anyURI ;
+  ], [
+    sh:prefix "rdf" ;
+    sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "dcat" ;
+    sh:namespace "http://www.w3.org/ns/dcat#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "dct" ;
+    sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ;
+  ], [
+    sh:prefix "sd" ;
+    sh:namespace "https://w3id.org/okn/o/sd#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "attr" ;
+    sh:namespace "http://example.com/vocab/city/attr#"^^xsd:anyURI ;
+  ];
+.
+
+:BuildingOfInterestPresent
+  a sh:NodeShape ;
+  sh:targetNode chek:document ;
+  sh:sparql [
+    sh:prefixes ex: ;
+    sh:select """
+      SELECT $this (rdf:type as ?path) (?buildingOfInterestValue as ?value) WHERE {
+        ?buildingOfInterestParam a sd:Parameter ;
+          dct:identifier "buildingOfInterest" ;
+          sd:hasFixedValue ?buildingOfInterestValue ;
+        .
+        FILTER NOT EXISTS {
+          ?dataset city:hasObject/dct:identifier ?buildingOfInterestValue
+        }
+      }
+    """ ;
+  ] ;
+  sh:message "Building of interest not found in dataset" ;
+  sh:severity sh:Violation ;
+.
+
+:BuildingOfInterestRequirements
+  a sh:NodeShape ;
+  sh:targetNode chek:document ;
+  sh:sparql [
+    sh:prefixes ex: ;
+    sh:select """
+      SELECT ?buildingOfInterest (?value as ?path) ?value ?req WHERE {
+        ?buildingOfInterestParam a sd:Parameter ;
+          dct:identifier "buildingOfInterest" ;
+          sd:hasFixedValue ?buildingOfInterestValue ;
+        .
+        ?dataset city:hasObject ?buildingOfInterest .
+        ?buildingOfInterest dct:identifier ?buildingOfInterestValue .
+        {
+          FILTER NOT EXISTS {
+            ?buildingOfInterest city:hasGeometry ?geometry .
+            ?geometry city:hasSurface/rdf:type city:RoofSurface ;
+              city:lod ?lod .
+            FILTER(REGEX(?lod, "^[23].*"))
+          }
+          BIND(city:RoofSurface as ?value)
+          BIND("RoofSurface with LoD 2+" as ?req)
+        } UNION {
+          FILTER NOT EXISTS {
+            ?buildingOfInterest city:hasGeometry ?geometry .
+            ?geometry city:hasSurface/rdf:type city:WallSurface ;
+              city:lod ?lod .
+            FILTER(REGEX(?lod, "^[34].[1-4]"))
+          }
+          BIND(city:WallSurface as ?value)
+          BIND("WallSurface with LoD 3.1+" as ?req)
+        } UNION {
+          FILTER NOT EXISTS {
+            ?buildingOfInterest city:hasGeometry/city:hasSurface ?surface .
+            ?surface a city:WallSurface ;
+              attr:hasWindows ?hasWindows .
+            FILTER(?hasWindows IN (1, "true", true))
+          }
+          BIND(city:WallSurface as ?value)
+          BIND("WallSurface with attribute hasWindows = true or 1" as ?req)
+        }
+      }
+    """ ;
+  ] ;
+  sh:message "Building of interest does not satisfy requirement: {?req}" ;
+  sh:severity sh:Violation ;
+.

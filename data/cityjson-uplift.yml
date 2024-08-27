@@ -53,6 +53,7 @@ context:
     CityJSON: city:City
 
     type: '@type'
+    id: dct:identifier
     version: city:version
 
     CityObjects:

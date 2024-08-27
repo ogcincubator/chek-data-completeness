@@ -15,22 +15,53 @@ chekp:dummy a prof:Profile, chekp:Profile ;
   dct:hasVersion "1.0" ;
 .
 
-chekp:ascoli-piceno a prof:Profile, chekp:Profile ;
-  dct:title "Ascoli Piceno profile for CHEK" ;
+chekp:roads-present a prof:Profile, chekp:Profile ;
+  dct:title "Green public spaces present" ;
+  dct:description "This profile checks that roads are present in at least one dataset" ;
   dct:hasVersion "0.1" ;
   prof:isProfileOf chekp:chek ;
+  prof:hasToken "chek-roads-present" ;
+  prof:hasResource [
+    a prof:ResourceDescriptior ;
+    prof:hasRole role:validation ;
+    dct:format <https://w3id.org/mediatype/text/turtle> ;
+    dct:conformsTo <https://www.w3.org/TR/shacl/> ;
+    prof:hasArtifact <./shapes/roads-present.shacl> ;
+  ] ;
+.
+
+chekp:green-public-spaces-present a prof:Profile, chekp:Profile ;
+  dct:title "Green public spaces present" ;
+  dct:description "This profile checks that green public spaces are present in at least one dataset" ;
+  dct:hasVersion "0.1" ;
+  prof:isProfileOf chekp:chek ;
+  prof:hasToken "chek-green-public-spaces-present" ;
+  prof:hasResource [
+    a prof:ResourceDescriptior ;
+    prof:hasRole role:validation ;
+    dct:format <https://w3id.org/mediatype/text/turtle> ;
+    dct:conformsTo <https://www.w3.org/TR/shacl/> ;
+    prof:hasArtifact <./shapes/green-public-spaces-present.shacl> ;
+  ] ;
+.
+
+chekp:ascoli-piceno a prof:Profile, chekp:Profile ;
+  dct:title "Ascoli Piceno profile for CHEK" ;
+  dct:description "General profile for the city of Ascoli Piceno" ;
+  dct:hasVersion "0.1" ;
+  prof:isProfileOf chekp:chek, chekp:roads-present ;
   prof:hasToken "chek-ascoli-piceno" ;
   prof:hasResource [
     a prof:ResourceDescriptior ;
     prof:hasRole role:validation ;
     dct:format <https://w3id.org/mediatype/text/turtle> ;
     dct:conformsTo <https://www.w3.org/TR/shacl/> ;
-    prof:hasArtifact <./ap-shapes.shacl> ;
+    prof:hasArtifact <./shapes/ascoli-piceno.shacl> ;
   ] ;
   sd:hasParameter [
     dct:identifier "pointOfInterest" ;
-    dct:description "Central point of interest (e.g., location of building of interest) for validation" ;
+    dct:description "Central point of interest (e.g., location of building of interest) for validation in x,y,z format" ;
     sd:hasDataType "string" ;
-    hydra:required false ;
+    hydra:required true ;
   ] ;
 .

@@ -1,0 +1,50 @@
+@prefix : <urn:chek:profiles/green-public-spaces-present#> .
+@prefix chek: <urn:chek:vocab/> .
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ex: <http://example.org/> .
+@prefix city: <http://example.com/vocab/city/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+
+ex:
+  a owl:Ontology ;
+  owl:imports sh: ;
+  sh:declare [
+    sh:prefix "city" ;
+    sh:namespace "http://example.com/vocab/city/"^^xsd:anyURI ;
+  ], [
+    sh:prefix "rdf" ;
+    sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "dcat" ;
+    sh:namespace "http://www.w3.org/ns/dcat#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "dct" ;
+    sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ;
+  ], [
+    sh:prefix "sd" ;
+    sh:namespace "https://w3id.org/okn/o/sd#"^^xsd:anyURI ;
+  ];
+.
+
+:GreenPublicSpaces
+    a sh:NodeShape ;
+    sh:targetNode chek:document ;
+    sh:not [
+        sh:sparql [
+          sh:prefixes ex: ;
+          sh:select """
+            SELECT $this (rdf:type as ?path) (city:Road as ?value) WHERE {
+              ?s a city:Road
+            } LIMIT 1
+        """ ;
+        ] ;
+      ] ;
+    sh:message "Dataset contains no Road objects" ;
+    sh:severity sh:Violation ;
+.
