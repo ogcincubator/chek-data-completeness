@@ -12,9 +12,9 @@
               Edit
             </button>
             <button @click.prevent="loadBackend" class="btn btn-primary" type="button">
-              <div v-if="backend.loading" class="spinner-border text-black" style="width: 1rem; height: 1rem;" role="status">
+              <span v-if="backend.loading" class="spinner-border text-black" style="width: 1rem; height: 1rem;" role="status">
                 <span class="visually-hidden">Loading...</span>
-              </div>
+              </span>
               <span v-else-if="backendReady">Reload</span>
               <span v-else>Load</span>
             </button>
@@ -37,9 +37,14 @@
               </select>
             </div>
             <div v-if="profileReady">
-              <div class="mb-3">
-                <label for="file" class="form-label">File to validate</label>
-                <input @change="loadFile" class="form-control" type="file">
+              <div class="mb-3" v-for="(cityFile, idx) of cityFiles" :key="cityFile.id">
+                <label :for="`file-${cityFile.id}`" class="form-label">File to validate</label>
+                <div class="input-group">
+                  <input @change="fileSelected(cityFile, idx, $event)" class="form-control" type="file" :id="`file-${cityFile.id}`">
+                  <button v-if="idx > 0 && cityFile.file" @click="deleteFile(idx)" class="btn btn-primary" type="button">
+                    Remove
+                  </button>
+                </div>
               </div>
               <h3 v-if="profileFields.length">Parameters</h3>
               <div v-for="(field, idx) of profileFields" :key="idx" class="mb-3 process-input " :class="{required: field.required}">
@@ -88,6 +93,8 @@
 <script>
 const CHECK_RESULTS_TIME_MS = 1000;
 
+let cityFileId = 0;
+
 export default {
   props: {
     baseUrl: String,
@@ -96,7 +103,10 @@ export default {
     return {
       backendUrlModel: this.baseUrl,
       profileModel: null,
-      fileContents: null,
+      cityFiles: [{
+        id: ++cityFileId,
+        file: null,
+      }],
       backend: {
         loading: false,
         error: false,
@@ -126,7 +136,10 @@ export default {
       this.backend.url = null;
       this.profile.id = null;
       this.profileCache = {};
-      this.fileContents = null;
+      this.cityFiles = [{
+        id: ++cityFileId,
+        file: null,
+      }]
     },
     async loadBackend() {
       this.reset();
@@ -159,12 +172,15 @@ export default {
     },
     async execute() {
       this.results.error = false;
+      const cityFiles = await Promise.all(
+          this.cityFiles.filter(c => !!c.file).map(async (c, idx) => ({
+            name: `file-${idx}`,
+            data_str: await c.file.text(),
+          }))
+      );
       const requestData = {
         inputs: {
-          cityFiles: [{
-            name: 'inputFile',
-            data_str: this.fileContents,
-          }],
+          cityFiles,
         },
       };
       for (const field of this.profileFields) {
@@ -212,10 +228,17 @@ export default {
       this.results.timeout = null;
       this.results.content = null;
     },
-    async loadFile(ev) {
+    async fileSelected(cityFile, idx, ev) {
       const [file] = ev.target.files;
-      if (file) {
-        this.fileContents = await file.text();
+      cityFile.file = file;
+      if (!this.cityFiles.some(c => !c.file)) {
+        this.cityFiles.push({ id: ++cityFileId, file: null });
+      }
+    },
+    async deleteFile(idx) {
+      this.cityFiles.splice(idx, 1)
+      if (!this.cityFiles.some(c => !c.file)) {
+        this.cityFiles.push({ id: ++cityFileId, file: null });
       }
     },
     async checkJobStatus() {
@@ -291,7 +314,7 @@ export default {
           inputs.push({
             name: e[0],
             description: e[1].description || e[0],
-            required: true, //e[1].minOccurs > 0,
+            required: e[1]?.minOccurs > 0,
             type: e[1]?.schema?.type || 'string',
             value: '',
           });
@@ -339,5 +362,6 @@ export default {
 .process-input.required label:after {
   color: red;
   content: '*';
+  margin-left: 0.2em;
 }
 </style>

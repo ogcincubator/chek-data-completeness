@@ -20,7 +20,7 @@ const options = {
 }
 
 const baseUrl = document.querySelector('#app').dataset.baseUrl;
-const checkFormUrl = new URL('static/js/CheckForm.vue', baseUrl).toString();
+const checkFormUrl = new URL('static/js/vue/CheckForm.vue', baseUrl).toString();
 
 Vue.createApp({
     components: {
