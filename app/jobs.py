@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import json
 import re
+import sys
 from collections import deque
 from pathlib import Path
 from typing import List, Any
@@ -120,6 +121,8 @@ class Job:
             shacl_graph = Graph()
             while pending_profiles:
                 profile = pending_profiles.popleft()
+                if profile.uri in loaded_profile_uris:
+                    continue
                 for resource in profile.resources:
                     for artifact in resource.artifacts:
                         public_id = 'urn:check:shacl/doc' if not re.match(r'^https?://', artifact) else artifact
@@ -132,7 +135,7 @@ class Job:
                     if self.profile_loader:
                         profile_of = self.profile_loader.profiles_by_uri.get(profile_of_uri)
                     if profile_of:
-                        pending_profiles.append(profile)
+                        pending_profiles.append(profile_of)
                     else:
                         self.warnings.append({
                             'type': 'ProfileNotFound',
@@ -208,6 +211,7 @@ class Job:
                     text=True,
                 )
                 if subprocess_result.returncode:
+                    print(subprocess_result.stdout, file=sys.stderr)
                     raise Exception(f"Error converting input file {city_file.index} to RDF")
 
                 ttl_files.append(ttl_file)
