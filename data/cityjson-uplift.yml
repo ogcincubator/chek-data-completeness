@@ -4,19 +4,26 @@ transform:
     def replace_vertices: if . | type == "array" then map(replace_vertices) else "#vertices-\(. | @uri)" end ;
     .CityObjects |= [
       to_entries | .[] 
-      | .value.parents |= if . then map("_:city-objects-\(.)") else empty end
+      | .value.parents |= if . then map("#:city-objects-\(.)") else empty end
       | { "@id": "#city-objects-\(.key | @uri)", "dct:identifier": .key } + .value
-      | .geometry |= ([ .[] |
+      | .geometry |= if . then ([ .[] |
         .type as $GEOM_TYPE | (.boundaries | replace_vertices) as $BOUNDARIES | (try (.semantics.values | to_entries) catch []) as $INDEXES
         | {
           "surfaces": (if .semantics.surfaces
-            then [.semantics.surfaces | to_entries | .[] | .key as $IDX | .value | {"@type": [$GEOM_TYPE, .type], "boundaries": [$BOUNDARIES | .[$INDEXES | map(if .value == $IDX then .key else empty end) | .[]]]}]
+            then [.semantics.surfaces | to_entries | .[] | .key as $IDX
+              | .value + {
+                "@type": (if .type then [$GEOM_TYPE, .type] else $GEOM_TYPE end),
+                "boundaries": [$BOUNDARIES | .[$INDEXES | map(if .value == $IDX then .key else empty end) | .[]]]
+              }]
             else [{"@type": $GEOM_TYPE, "boundaries": $BOUNDARIES}]
             end),
           "lod": "\(.lod)"
         }
-      ])
+      ]) else empty end
     ]
+    | . + {
+      "@id": "#city"
+    }
   # Format coordinates and assign fragment ids to vertices
   - |
     def to_coords: if . then { "city:x": .[0], "city:y": .[1], "city:z": .[2] } else empty end ;
@@ -38,6 +45,7 @@ context:
     '@version': 1.1
 
     city: http://example.com/vocab/city/
+    attr: http://example.com/vocab/city/attr#
     dct: http://purl.org/dc/terms/
     xsd: http://www.w3.org/2001/XMLSchema#
     gml: http://www.opengis.net/ont/gml#
@@ -130,11 +138,16 @@ context:
 
             lod:
               '@id': city:lod
-            surfaces: city:hasSurface
+            surfaces:
+              '@id': city:hasSurface
+              '@context':
+                '@vocab': http://example.com/vocab/city/attr#
             boundaries:
               '@id': city:boundaries
               '@container': '@list'
               '@type': '@id'
+            function: city:hasFunction
+            usage: city:hasUsage
         attributes: '@nest'
         parents:
           '@id': city:hasParent
