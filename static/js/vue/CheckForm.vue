@@ -33,8 +33,12 @@
             <div class="mb-3">
               <label for="profile" class="form-label">Select a profile for validation</label>
               <select class="form-select" v-model="profileModel">
-                <option v-for="profile of profiles" :key="profile.id" :value="profile.id">{{ profile.id }}</option>
+                <option v-for="profile of profiles" :key="profile.id" :value="profile">
+                  <template v-if="profile.title">{{ profile.title }} ({{ profile.id }})</template>
+                  <template v-else>{{ profile.id }}</template>
+                </option>
               </select>
+              <div v-if="profileModel?.description" class="form-text">{{ profileModel.description }}</div>
             </div>
             <div v-if="profileReady">
               <div class="mb-3" v-for="(cityFile, idx) of cityFiles" :key="cityFile.id">
@@ -330,7 +334,8 @@ export default {
     },
   },
   watch: {
-    async profileModel(profileId) {
+    async profileModel(profile) {
+      const profileId = profile.id;
       this.profile.error = false;
 
       if (this.profileCache[profileId]) {

@@ -44,7 +44,6 @@ def match_accept_header(header: str, options: list[str], def_value=None) -> str:
     options = [o.strip().lower().split('/') for o in options]
     entries = parse_accept_entries(header)
     for entry in sorted(entries.items(), key=lambda e: -e[1]['q']):
-        print(entry)
         parts = entry[0].split('/')
         for option in options:
             if match_media_type(option, parts):
