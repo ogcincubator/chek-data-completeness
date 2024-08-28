@@ -56,6 +56,8 @@ context:
     id: dct:identifier
     version: city:version
 
+    attributes: '@nest'
+
     CityObjects:
       '@id': city:hasObject
       '@context':
@@ -97,6 +99,9 @@ context:
         _AbstractCityObject: city:_AbstractCityObject
         _AbstractTransportationComplex: city:_AbstractTransportationComplex
         '+GenericCityObject': https://www.cityjson.org/extensions/download/generic.ext.json#GenericCityObject
+
+        function: city:hasFunction
+        usage: city:hasUsage
         
         geometry:
           '@id': city:hasGeometry
@@ -147,9 +152,6 @@ context:
               '@id': city:boundaries
               '@container': '@list'
               '@type': '@id'
-            function: city:hasFunction
-            usage: city:hasUsage
-        attributes: '@nest'
         parents:
           '@id': city:hasParent
           '@type': '@id'

@@ -33,7 +33,7 @@ ex:
   ], [
     sh:prefix "attr" ;
     sh:namespace "http://example.com/vocab/city/attr#"^^xsd:anyURI ;
-  ];
+  ] ;
 .
 
 :BuildingOfInterestPresent

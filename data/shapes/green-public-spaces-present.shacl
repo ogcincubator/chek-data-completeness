@@ -29,22 +29,27 @@ ex:
   ], [
     sh:prefix "sd" ;
     sh:namespace "https://w3id.org/okn/o/sd#"^^xsd:anyURI ;
-  ];
+  ], [
+    sh:prefix "attr" ;
+    sh:namespace "http://example.com/vocab/city/attr#"^^xsd:anyURI ;
+  ] ;
 .
 
 :GreenPublicSpaces
     a sh:NodeShape ;
     sh:targetNode chek:document ;
-    sh:not [
-        sh:sparql [
-          sh:prefixes ex: ;
-          sh:select """
-            SELECT $this (rdf:type as ?path) (city:Road as ?value) WHERE {
-              ?s a city:Road
-            } LIMIT 1
-        """ ;
-        ] ;
-      ] ;
-    sh:message "Dataset contains no Road objects" ;
+    sh:sparql [
+      sh:prefixes ex: ;
+      sh:select """
+        SELECT $this (rdf:type as ?path) ("LandUse objects with function 1110, 3010 or 3030" as ?value) WHERE {
+          FILTER NOT EXISTS {
+            ?s a city:LandUse ;
+              city:hasFunction ?function .
+            FILTER(?function IN ("1110", "3010", "3030"))
+          }
+        } LIMIT 1
+    """ ;
+    ] ;
+    sh:message "Dataset contains no green public spaces" ;
     sh:severity sh:Violation ;
 .

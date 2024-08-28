@@ -29,7 +29,10 @@ ex:
   ], [
     sh:prefix "sd" ;
     sh:namespace "https://w3id.org/okn/o/sd#"^^xsd:anyURI ;
-  ];
+  ], [
+    sh:prefix "attr" ;
+    sh:namespace "http://example.com/vocab/city/attr#"^^xsd:anyURI ;
+  ] ;
 .
 
 :RoadsPresent
