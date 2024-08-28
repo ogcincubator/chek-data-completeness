@@ -79,7 +79,10 @@
           Validation was successful!
         </div>
         <div v-if="validationErrors" class="alert alert-warning" role="alert">
-          Validation errors were encountered
+          Validation errors were encountered.
+            <ul v-if="extractedErrors?.length">
+              <li v-for="error in extractedErrors">{{ error.type }}: {{ error.message }}</li>
+            </ul>
         </div>
         <div v-if="results.error" class="alert alert-danger" role="alert">
           An error was encountered while attempting validation<span v-if="typeof results.error === 'string'"> ({{ results.error }})</span>.
@@ -88,7 +91,7 @@
           <div class="text-end">
             <button @click.prevent="copyResultsToClipboard" class="btn btn-primary">Copy to clipboard</button>
           </div>
-          <pre class="border rounded-1 p-1 my-1" style="font-size: 90%; max-height: 400px"><code>{{ results.content }}</code></pre>
+          <pre class="border rounded-1 p-1 my-1" style="font-size: 90%; max-height: 400px"><code>{{ resultText }}</code></pre>
         </div>
       </div>
     </div>
@@ -96,8 +99,25 @@
 </template>
 <script>
 const CHECK_RESULTS_TIME_MS = 1000;
+const CHEK_DOCUMENT_URI = 'urn:chek:vocab/document';
 
 let cityFileId = 0;
+
+const jsonldToString = (node) => {
+  if (typeof node === 'object') {
+    if (node['@id']) {
+      return node['@id'];
+    }
+    if (node['@value']) {
+      return node['@value'];
+    }
+    return JSON.stringify(node);
+  }
+  if (Array.isArray(node)) {
+    return JSON.stringify(node);
+  }
+  return node;
+};
 
 export default {
   props: {
@@ -154,7 +174,7 @@ export default {
         });
         let data = await response.json();
         if (!data.links?.some(link => link.rel === 'http://www.opengis.net/def/rel/ogc/1.0/processes')) {
-          throw new Error(`No OGC API processes service found at ${url}`);
+          throw new Error(`No OGC API processes service found at ${this.backendUrlModel}`);
         }
 
         response = await fetch(new URL('processes', this.baseUrl), {
@@ -178,7 +198,7 @@ export default {
       this.results.error = false;
       const cityFiles = await Promise.all(
           this.cityFiles.filter(c => !!c.file).map(async (c, idx) => ({
-            name: `file-${idx}`,
+            name: c.file.name || `file-${idx}`,
             data_str: await c.file.text(),
           }))
       );
@@ -281,7 +301,7 @@ export default {
           throw new Error(`${response.status} - ${response.statusText}`);
         }
         this.results.loading = false;
-        this.results.content = JSON.stringify(await response.json(), null, 2);
+        this.results.content = await response.json();
       } catch (e) {
         console.error(`Error obtaining results for job ${this.profile.jobId}`, e);
         if (!this.results.error) {
@@ -291,7 +311,7 @@ export default {
     },
     copyResultsToClipboard() {
       if (this.results.content) {
-        navigator.clipboard.writeText(this.results.content);
+        navigator.clipboard.writeText(this.resultText);
       }
     },
   },
@@ -332,6 +352,49 @@ export default {
     validationErrors() {
       return this.resultsReady && !this.results.error && !this.results.content.valid;
     },
+    resultText() {
+      return JSON.stringify(this.results?.content, null, 2);
+    },
+    extractedErrors() {
+      if (!this.results.content) {
+        return [];
+      }
+      const result = [];
+      const shaclReport = this.results.content.shaclReport;
+      const val3dityReports = this.results.content.fileValidation;
+
+      for (const failedShape of shaclReport.result) {
+        let msg = `${failedShape.resultMessage} (${jsonldToString(failedShape.sourceShape)}`;
+        if (failedShape.focusNode !== CHEK_DOCUMENT_URI) {
+          msg += `for ${jsonldToString(failedShape.focusNode)}`;
+        }
+        msg += failedShape.value !== CHEK_DOCUMENT_URI ? `, value ${jsonldToString(failedShape.value)})` : ')';
+
+        result.push({
+          type: 'SHACL',
+          message: msg,
+        })
+      }
+
+      if (!this.results.content.val3dityResult) {
+        for (const fileEntry of val3dityReports) {
+          const featuresOverview = fileEntry?.val3dityReport?.features_overview;
+          if (featuresOverview?.length) {
+            for (const fo of featuresOverview) {
+              if (fo.total > fo.valid) {
+                let msg = `${fileEntry.name}: Errors found in ${fo.total - fo.valid} features of type ${fo.type}`;
+                result.push({
+                  type: 'val3dity',
+                  message: msg,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      return result;
+    }
   },
   watch: {
     async profileModel(profile) {

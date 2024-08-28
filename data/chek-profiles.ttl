@@ -59,8 +59,8 @@ chekp:ascoli-piceno a prof:Profile, chekp:Profile ;
     prof:hasArtifact <./shapes/ascoli-piceno.shacl> ;
   ] ;
   sd:hasParameter [
-    dct:identifier "pointOfInterest" ;
-    dct:description "Central point of interest (e.g., location of building of interest) for validation in x,y,z format" ;
+    dct:identifier "buildingOfInterest" ;
+    dct:description "Identifier for the building of interest" ;
     sd:hasDataType "string" ;
     hydra:required true ;
   ] ;

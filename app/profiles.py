@@ -3,10 +3,10 @@ import os.path
 import re
 from pathlib import Path
 from threading import Timer
-from typing import Sequence, List
+from typing import List
 from urllib.parse import unquote, urlparse
 
-from pydantic import parse_obj_as, RootModel, field_serializer, TypeAdapter
+from pydantic import RootModel, field_serializer, TypeAdapter
 from pyld import jsonld
 from rdflib import Graph
 
