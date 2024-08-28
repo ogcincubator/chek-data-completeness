@@ -43,7 +43,7 @@ You may also create a `.env` file with the [configuration](#configuration) inste
 val3dity and CityGML tools come prepackaged in the Docker image, so no dependencies are required.  
 
 ```
-docker run --platform=linux/x86_64 --pull=always -p 8080:8080 ghcr.io/ogcincubator/chek-data-completeness
+docker run --pull=always -p 8080:8080 ghcr.io/ogcincubator/chek-data-completeness
 ```
 
 The service will be available at https://localhost:8080.
@@ -52,7 +52,7 @@ If you need to serve the application from a path other than `/`, you can pass it
 variable:
 
 ```
-docker run  --platform=linux/x86_64 --pull=always -p 8080:8080 -e ROOT_PATH=/my-subpath/ ghcr.io/ogcincubator/chek-data-completeness
+docker run --pull=always -p 8080:8080 -e ROOT_PATH=/my-subpath/ ghcr.io/ogcincubator/chek-data-completeness
 ```
 
 ## Configuration
