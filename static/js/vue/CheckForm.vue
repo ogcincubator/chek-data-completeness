@@ -363,17 +363,19 @@ export default {
       const shaclReport = this.results.content.shaclReport;
       const val3dityReports = this.results.content.fileValidation;
 
-      for (const failedShape of shaclReport.result) {
-        let msg = `${failedShape.resultMessage} (${jsonldToString(failedShape.sourceShape)}`;
-        if (failedShape.focusNode !== CHEK_DOCUMENT_URI) {
-          msg += `for ${jsonldToString(failedShape.focusNode)}`;
-        }
-        msg += failedShape.value !== CHEK_DOCUMENT_URI ? `, value ${jsonldToString(failedShape.value)})` : ')';
+      if (shaclReport.result?.length) {
+        for (const failedShape of shaclReport.result) {
+          let msg = `${failedShape.resultMessage} (${jsonldToString(failedShape.sourceShape)}`;
+          if (failedShape.focusNode !== CHEK_DOCUMENT_URI) {
+            msg += `for ${jsonldToString(failedShape.focusNode)}`;
+          }
+          msg += failedShape.value !== CHEK_DOCUMENT_URI ? `, value ${jsonldToString(failedShape.value)})` : ')';
 
-        result.push({
-          type: 'SHACL',
-          message: msg,
-        })
+          result.push({
+            type: 'SHACL',
+            message: msg,
+          })
+        }
       }
 
       if (!this.results.content.val3dityResult) {

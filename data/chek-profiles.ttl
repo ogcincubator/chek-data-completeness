@@ -16,7 +16,7 @@ chekp:dummy a prof:Profile, chekp:Profile ;
 .
 
 chekp:roads-present a prof:Profile, chekp:Profile ;
-  dct:title "Green public spaces present" ;
+  dct:title "Roads present" ;
   dct:description "This profile checks that roads are present in at least one dataset" ;
   dct:hasVersion "0.1" ;
   prof:isProfileOf chekp:chek ;
