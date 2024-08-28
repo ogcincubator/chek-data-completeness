@@ -19,7 +19,7 @@ RUN wget "${VAL3DITY_SRC}" -O val3dity-src.tar.gz \
 
 FROM eclipse-temurin:17-noble AS runner
 
-ARG CITYGML_TOOLS="https://github.com/citygml4j/citygml-tools/releases/download/v2.3.0/citygml-tools-2.3.0.zip"
+ARG CITYGML_TOOLS="https://github.com/citygml4j/citygml-tools/releases/download/v2.3.2/citygml-tools-2.3.2.zip"
 
 COPY --from=val3dity_builder /src/val3dity/build/val3dity /usr/bin/val3dity
 
