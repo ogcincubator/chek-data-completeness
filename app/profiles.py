@@ -230,6 +230,7 @@ def _load_bblocks_profiles(source: str) -> list[Profile]:
             profile_obj = jsonld.frame(json.loads(g.serialize(format='json-ld')),
                                        LOAD_PROFILES_FRAME)
             profile_obj.setdefault('profileOf', []).append('urn:chek:profiles/chek')
+            profile_obj['token'] = bblock_id
             profile_obj['resources'] = [{
                 'role': 'prof-role:validation',
                 'conformsTo': 'https://www.w3.org/TR/shacl/',
