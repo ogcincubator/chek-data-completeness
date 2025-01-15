@@ -257,7 +257,12 @@ context:
         identifier: dct:identifier
     geographicalExtent: city:geographicalExtent
 
-    vertices: city:hasVertex
+    vertices:
+      '@id': city:hasVertex
+      '@context':
+        properties: '@nest'
+        geometry: city:hasGeometry
+        Point: geojson:Point
 
     extensions:
       '@id': city:hasExtension

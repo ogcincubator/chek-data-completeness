@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    data_source: str = './data/chek-profiles.ttl'
+    data_source: list[str] | str = './data/chek-profiles.ttl'
     python3: str = 'python3'
     val3dity: str = '/opt/val3dity/val3dity'
     citygml_tools: str = '/opt/citygml-tools/citygml-tools'

@@ -60,13 +60,13 @@ docker run --pull=always -p 8080:8080 -e ROOT_PATH=/my-subpath/ ghcr.io/ogcincub
 The application can be configured by using environment variables and/or a `.env` file (with the former taking
 precedence). The following (case-insensitive) configuration variables are available:
 
-| Variable      | Default value                      | Description                                                                                                                                                   |
-|---------------|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| data_source   | `./data/chek-profiles.ttl`         | Data source for profiles. Can be a path or a URL to a Turtle file containing the definition of the profiles, or a SPARQL endpoint URL prefixed with `sparql:` |
-| python3       | `python3`                          | Path to the Python 3 executable                                                                                                                               |
-| val3dity      | `/opt/val3dity/val3dity`           | Path to [val3dity](https://github.com/tudelft3d/val3dity/) executable                                                                                         |
-| citygml_tools | `/opt/citygml-tools/citygml-tools` | Path to [CityGML tools](https://github.com/citygml4j/citygml-tools) executable                                                                                |
-| temp_dir      | `./tmp`                            | Directory where temporary files will be stored                                                                                                                |
+| Variable      | Default value                      | Description                                                                                                                                                                                                                                                                                 |
+|---------------|------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| data_source   | `./data/chek-profiles.ttl`         | Data source for profiles. Can be a path or a URL to a Turtle file containing the definition of the profiles, or a SPARQL endpoint URL prefixed with `sparql:`, or a URL to an OGC Building Blocks `register.json` prefixed with `bblocks:`. Also supports a list of entries in JSON format. |
+| python3       | `python3`                          | Path to the Python 3 executable                                                                                                                                                                                                                                                             |
+| val3dity      | `/opt/val3dity/val3dity`           | Path to [val3dity](https://github.com/tudelft3d/val3dity/) executable                                                                                                                                                                                                                       |
+| citygml_tools | `/opt/citygml-tools/citygml-tools` | Path to [CityGML tools](https://github.com/citygml4j/citygml-tools) executable                                                                                                                                                                                                              |
+| temp_dir      | `./tmp`                            | Directory where temporary files will be stored                                                                                                                                                                                                                                              |
 
 ## Defining profiles
 
@@ -110,6 +110,18 @@ chekp:sample a prof:Profile, chekp:Profile ;     # Only instances of checkp:Prof
 .
 ```
 
+### Building Block profiles
+
+When defining **Building Block profiles**:
+
+* The RDF description must be provided in the `data.ttl` file for the building block (or as a URI inside the `rdfData`
+  array field in `bblock.json`).
+* The SHACL shapes must be included in the `rules.shacl` file (or the `shaclRules` field in `bblock.json`).
+* The building block **must contain** the `chek-validation-profile` among its tags.
+
+Building Block register resolution is enabled, so registers will be loaded recursively according to their `imports`
+(`bblocks-config.yaml`).
+
 ### Profile inheritance
 
 `prof:isProfileOf` can be used to define an inheritance chain. If a profile is declared to be the profile of
@@ -126,6 +138,9 @@ existing sets of rules. For example, given the following profile hierarchy:
 
 A validation run against the "Ascoli Piceno Old town" profile will include the rules for "Ascoli Piceno municipality",
 "Ascoli Piceno Province", "Marche region" and "Italy".
+
+In the case of **Building Block profiles**, profile inheritance is signaled by using the `dependsOn` field in
+`bblock.json`.
 
 ### Using parameters
 

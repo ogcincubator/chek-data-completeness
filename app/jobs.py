@@ -124,6 +124,9 @@ class Job:
                 if profile.uri in loaded_profile_uris:
                     continue
                 for resource in profile.resources:
+                    if (resource.role != 'prof-role:validation'
+                            or resource.conformsTo != 'https://www.w3.org/TR/shacl/'):
+                        continue
                     for artifact in resource.artifacts:
                         public_id = 'urn:check:shacl/doc' if not re.match(r'^https?://', artifact) else artifact
                         shacl_graph.parse(artifact, publicID=public_id)
