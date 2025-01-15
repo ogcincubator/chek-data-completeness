@@ -121,9 +121,10 @@ def view_process(process_id: str) -> model.Process:
 @app.post('/processes/{process_id}/execution', status_code=201)
 def process_execution(process_id: str, data: model.ValidationExecute, req: Request, resp: Response,
                       background_tasks: BackgroundTasks) -> model.StatusInfo:
-    profile = app.profile_loader.profiles.get(process_id)
 
-    if not profile:
+    profiles = [app.profile_loader.profiles.get(pid) for pid in process_id.split(',')]
+
+    if not all(profiles):
         raise HTTPException(
             status_code=404,
             detail=model.Exception(
@@ -134,7 +135,7 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
 
     parameters = {k: v for k, v in data.inputs.model_dump().items() if k != 'cityFiles'}
     job = job_executor.create_job(city_files=data.inputs.cityFiles,
-                                  profiles=[profile],
+                                  profiles=profiles,
                                   parameters=parameters,
                                   profile_loader=app.profile_loader)
     job_id = job.job_id
