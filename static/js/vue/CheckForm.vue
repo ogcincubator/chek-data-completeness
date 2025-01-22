@@ -154,6 +154,9 @@ export default {
       },
     };
   },
+  mounted() {
+    this.loadBackend();
+  },
   methods: {
     reset() {
       this.backend.error = false;
