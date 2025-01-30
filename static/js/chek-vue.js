@@ -7,7 +7,6 @@ const options = {
         vue: Vue,
     },
     async getFile(url) {
-        console.log('getFile', url);
         const componentUrl = new URL(`static/js/vue/${url}`, baseUrl);
 
         const res = await fetch(componentUrl);

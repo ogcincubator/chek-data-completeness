@@ -383,7 +383,6 @@ class SemanticUpliftJob(Job):
             raise ValueError(f"Unsupported format: {rdf_format}")
         self.output_file = self.path.with_name(self.path.stem + params[2])
         params[2] = str(self.output_file)
-        print("OUTPUT FILE", self.output_file)
         subprocess_result = subprocess.run(
             [
                 'python3',
