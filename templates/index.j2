@@ -4,14 +4,16 @@
         <title>CHEK data completeness validator</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="{{ url_for('static', path='/css/bootstrap.min.css') }}" rel="stylesheet">
+        <link href="{{ url_for('static', path='/css/vuetify.min.css') }}" rel="stylesheet">
+        <link href="{{ url_for('static', path='/css/materialdesignicons.min.css') }}" rel="stylesheet">
     </head>
     <body>
         <div id="app" data-base-url="{{ url_for('capabilities') }}">
-            <chek-form base-url="{{ url_for('capabilities') }}"></chek-form>
+            <chek-data-completeness base-url="{{ url_for('capabilities') }}"></chek-data-completeness>
         </div>
         <script src="{{ url_for('static', path='/js/vue.global.js') }}"></script>
         <script src="{{ url_for('static', path='/js/vue3-sfc-loader.js') }}"></script>
+        <script src="{{ url_for('static', path='/js/vuetify.min.js') }}"></script>
         <script src="{{ url_for('static', path='/js/chek-vue.js') }}"></script>
     </body>
 </html>

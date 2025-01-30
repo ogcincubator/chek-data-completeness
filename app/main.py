@@ -1,3 +1,4 @@
+import itertools
 import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Union
@@ -9,7 +10,7 @@ from fastapi.responses import HTMLResponse
 
 from app import model, util
 from app.config import settings
-from app.jobs import job_executor
+from app.jobs import job_executor, RESERVED_PROCESSES
 from app.profiles import ProfileLoader, ProfileList
 
 MEDIA_TEXT_HTML = 'text/html'
@@ -96,14 +97,17 @@ def conformance() -> model.ConfClasses:
 @app.get('/processes')
 def list_processes() -> model.ProcessList:
     return model.ProcessList(
-        processes=[profile.to_process_summary() for profile in app.profile_loader.profiles.values()],
+        processes=list(itertools.chain(
+            (profile.to_process_summary() for profile in app.profile_loader.profiles.values()),
+            (model.ProcessSummary(**p['process'].dict()) for p in RESERVED_PROCESSES.values()),
+        )),
         links=[],
     )
 
 
 @app.get('/processes/{process_id}')
 def view_process(process_id: str) -> model.Process:
-    profile = app.profile_loader.profiles.get(process_id)
+    profile = app.profile_loader.profiles.get(process_id, RESERVED_PROCESSES.get(process_id))
     if not profile:
         raise HTTPException(
             status_code=404,
@@ -113,7 +117,7 @@ def view_process(process_id: str) -> model.Process:
                 title='Process not found',
             ).model_dump(exclude_none=True))
 
-    process_description = profile.to_process_description()
+    process_description = profile['process'] if isinstance(profile, dict) else profile.to_process_description()
 
     return process_description.model_dump(by_alias=True, exclude_unset=True)
 
@@ -122,9 +126,9 @@ def view_process(process_id: str) -> model.Process:
 def process_execution(process_id: str, data: model.ValidationExecute, req: Request, resp: Response,
                       background_tasks: BackgroundTasks) -> model.StatusInfo:
 
-    profiles = [app.profile_loader.profiles.get(pid) for pid in process_id.split(',')]
+    profile_ids = process_id.split(',')
 
-    if not all(profiles):
+    if not all(pid in app.profile_loader.profiles or pid in RESERVED_PROCESSES for pid in profile_ids):
         raise HTTPException(
             status_code=404,
             detail=model.Exception(
@@ -134,10 +138,10 @@ def process_execution(process_id: str, data: model.ValidationExecute, req: Reque
             ).model_dump(exclude_none=True))
 
     parameters = {k: v for k, v in data.inputs.model_dump().items() if k != 'cityFiles'}
-    job = job_executor.create_job(city_files=data.inputs.cityFiles,
-                                  profiles=profiles,
-                                  parameters=parameters,
-                                  profile_loader=app.profile_loader)
+    job = job_executor.create_job(profile_ids=profile_ids,
+                                  profile_loader=app.profile_loader,
+                                  city_files=data.inputs.cityFiles,
+                                  parameters=parameters)
     job_id = job.job_id
     background_tasks.add_task(job.execute_sync)
 
@@ -166,7 +170,7 @@ def view_job(job_id: str) -> model.StatusInfo:
                 title='Job not found',
             ).model_dump(exclude_none=True))
     return model.StatusInfo(
-        processID=','.join(p.get_id() for p in job.profiles),
+        processID=job.process_id,
         jobID=job_id,
         status=job.status,
         type=model.Type.process,
@@ -203,24 +207,7 @@ def job_results(job_id: str):
             'errors': [str(e) for e in job.errors],
         }
     else:
-        result = {
-            'valid': job.valid,
-            'val3dityResult': job.val3dity_result,
-            'shaclResult': job.shacl_result,
-            'shaclReport': job.shacl_report,
-            'fileValidation': [
-                {
-                    'fileIndex': file_result.index,
-                    'name': file_result.input_file.name,
-                    'valid': file_result.valid,
-                    'val3dityReport': file_result.val3dity_report,
-                }
-                for file_result in job.city_files
-            ],
-        }
-        if job.warnings:
-            result['warnings'] = job.warnings
-        return result
+        return job.get_result()
 
 
 @app.get('/profiles')

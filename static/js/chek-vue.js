@@ -1,13 +1,18 @@
 const { loadModule } = window['vue3-sfc-loader'];
 
+const baseUrl = document.querySelector('#app').dataset.baseUrl;
+
 const options = {
     moduleCache: {
-        vue: Vue
+        vue: Vue,
     },
     async getFile(url) {
-        const res = await fetch(url);
+        console.log('getFile', url);
+        const componentUrl = new URL(`static/js/vue/${url}`, baseUrl);
+
+        const res = await fetch(componentUrl);
         if ( !res.ok )
-            throw Object.assign(new Error(res.statusText + ' ' + url), { res });
+            throw Object.assign(new Error(res.statusText + ' ' + componentUrl), { res });
         return {
             getContentData: asBinary => asBinary ? res.arrayBuffer() : res.text(),
         }
@@ -19,11 +24,11 @@ const options = {
     },
 }
 
-const baseUrl = document.querySelector('#app').dataset.baseUrl;
-const checkFormUrl = new URL('static/js/vue/CheckForm.vue', baseUrl).toString();
+const vuetify = Vuetify.createVuetify({
+});
 
-Vue.createApp({
+const app = Vue.createApp({
     components: {
-        'chek-form': Vue.defineAsyncComponent( () => loadModule(checkFormUrl, options) )
+        'ChekDataCompleteness': Vue.defineAsyncComponent( () => loadModule('Main.vue', options) ),
     }
-}).mount('#app');
+}).use(vuetify).mount('#app');

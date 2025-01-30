@@ -23,7 +23,7 @@ COMMON_INPUTS = {
         description='Input data file (CityJSON or CityGML)',
         minOccurs=1,
         maxOccurs=model.MaxOccurs.unbounded,
-        schema=model.Schema(
+        schema_=model.Schema(
             type='object',
             properties={
                 'name': model.Schema(
@@ -191,7 +191,7 @@ class Profile(Model):
                     description=param.description,
                     minOccurs=1 if param.required else 0,
                     maxOccurs=1,
-                    schema=model.Schema(
+                    schema_=model.Schema(
                         type=param.dataType,
                     ),
                 ) for param in self.parameters
