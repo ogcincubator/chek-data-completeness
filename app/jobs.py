@@ -239,7 +239,7 @@ class ProfileJob(Job):
             city_file.val3dity_report = val3dity_report
 
             # 3.2 Uplift
-            ttl_file = path.with_name(path.stem + '-uplift.ttl')
+            ttl_pre_file = path.with_name(path.stem + '-uplift-pre.ttl')
             subprocess_result = subprocess.run(
                 [
                     'python3',
@@ -250,7 +250,7 @@ class ProfileJob(Job):
                     '--no-provenance',
                     '--ttl',
                     '--ttl-file',
-                    str(ttl_file),
+                    str(ttl_pre_file),
                     '--context',
                     './data/cityjson-uplift.yml',
                     str(path),
@@ -262,6 +262,23 @@ class ProfileJob(Job):
             if subprocess_result.returncode:
                 print(subprocess_result.stdout, file=sys.stderr)
                 raise Exception(f"Error converting input file {city_file.index} to RDF")
+
+            ttl_file = path.with_name(path.stem + '-uplift.ttl')
+            subprocess_result = subprocess.run(
+                [
+                    'python3',
+                    './app/entail.py',
+                    str(ttl_pre_file),
+                    './data/cityjson-entailments.shacl',
+                    str(ttl_file),
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            if subprocess_result.returncode:
+                print(subprocess_result.stdout, file=sys.stderr)
+                raise Exception(f"Error applying inference to input file {city_file.index}")
 
             ttl_files.append(ttl_file)
 
@@ -375,14 +392,18 @@ class SemanticUpliftJob(Job):
             city_file.is_cityjson = True
 
         # 2. Uplift
+        apply_entailments = True
         if rdf_format in ('jsonld', 'json-ld', 'application/ld+json'):
             params = ['--json-ld', '--json-ld-file', '-uplift.jsonld']
+            apply_entailments = False
         elif rdf_format in ('ttl', 'turtle', 'text/turtle'):
             params = ['--ttl', '--ttl-file', '-uplift.ttl']
         else:
             raise ValueError(f"Unsupported format: {rdf_format}")
         self.output_file = self.path.with_name(self.path.stem + params[2])
-        params[2] = str(self.output_file)
+        params[2] = (str(self.output_file.with_stem('-pre' + self.output_file.stem))
+                     if apply_entailments
+                     else str(self.output_file))
         subprocess_result = subprocess.run(
             [
                 'python3',
@@ -403,6 +424,23 @@ class SemanticUpliftJob(Job):
         if subprocess_result.returncode:
             print(subprocess_result.stdout, file=sys.stderr)
             raise Exception(f"Error converting input file {city_file.index} to RDF")
+
+        if apply_entailments:
+            subprocess_result = subprocess.run(
+                [
+                    'python3',
+                    './app/entail.py',
+                    params[2],
+                    './data/cityjson-entailments.shacl',
+                    str(self.output_file),
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            if subprocess_result.returncode:
+                print(subprocess_result.stdout, file=sys.stderr)
+                raise Exception(f"Error applying inference to input file {city_file.index}")
 
     def get_result(self):
         result = super().get_result()

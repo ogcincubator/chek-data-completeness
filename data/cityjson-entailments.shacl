@@ -1,0 +1,43 @@
+@prefix : <urn:city-validator:rules#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:prefixes sh:declare [
+    sh:prefix "city" ;
+    sh:namespace "http://example.com/vocab/city/"^^xsd:anyURI ;
+  ], [
+    sh:prefix "rdf" ;
+    sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "dcat" ;
+    sh:namespace "http://www.w3.org/ns/dcat#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "dct" ;
+    sh:namespace "http://purl.org/dc/terms/"^^xsd:anyURI ;
+  ], [
+    sh:prefix "sd" ;
+    sh:namespace "https://w3id.org/okn/o/sd#"^^xsd:anyURI ;
+  ], [
+    sh:prefix "attr" ;
+    sh:namespace "http://example.com/vocab/city/attr#"^^xsd:anyURI ;
+  ] ;
+.
+
+:ParentChildren
+  a sh:NodeShape ;
+  sh:targetNode :dummy ;
+  sh:rule [
+    a sh:SPARQLRule ;
+    sh:prefixes :prefixes ;
+    sh:construct """
+      CONSTRUCT {
+        $this city:hasParent ?parent ;
+          city:hasChild ?child .
+      } WHERE {
+        { ?parent city:hasChild $this }
+        UNION
+        { ?child city:hasParent $this }
+      }
+    """
+  ] ;
+.
