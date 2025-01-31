@@ -1,8 +1,8 @@
 <script setup>
 import {ref, reactive, computed, defineProps, onMounted} from 'vue';
-import ChekValidator from 'Validator.vue';
-import ChekUplift from 'Uplift.vue';
-import ChekRuleGenerator from 'RuleGenerator.vue';
+import ChekValidator from 'components/Validator.vue';
+import ChekUplift from 'components/Uplift.vue';
+import ChekRuleGenerator from 'components/RuleGenerator.vue';
 
 const props = defineProps(['baseUrl']);
 

@@ -28,6 +28,6 @@ const vuetify = Vuetify.createVuetify({
 
 const app = Vue.createApp({
     components: {
-        'ChekDataCompleteness': Vue.defineAsyncComponent( () => loadModule('Main.vue', options) ),
+        'ChekDataCompleteness': Vue.defineAsyncComponent( () => loadModule('components/Main.vue', options) ),
     }
 }).use(vuetify).mount('#app');
