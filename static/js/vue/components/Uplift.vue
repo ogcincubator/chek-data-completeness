@@ -1,5 +1,6 @@
 <script setup>
 import { ref, defineProps, computed } from 'vue';
+import { copyToClipboard } from "@/lib/utils";
 
 const props = defineProps({
   backendUrl: String,
@@ -111,11 +112,6 @@ const fetchResults = async () => {
 };
 
 const resultText = computed(() => result.value?.data);
-const copyResultsToClipboard = () => {
-  if (resultText.value) {
-    navigator.clipboard.writeText(resultText.value);
-  }
-};
 const saveResults = () => {
   if (resultText.value) {
     const blob = new Blob([resultText.value], { type: 'text/turtle' });
@@ -153,7 +149,7 @@ const errorMessage = computed(() => result.value?.errors[0] || error.value);
     <v-alert v-if="!loading && error" type="error">Error uplifting file: {{ errorMessage }}</v-alert>
     <div class="results" v-if="!loading && resultText">
       <div class="text-end">
-        <v-btn @click.prevent="copyResultsToClipboard" prepend-icon="mdi-clipboard" color="primary">
+        <v-btn @click.prevent="copyToClipboard(resultText)" prepend-icon="mdi-clipboard" color="primary">
           Copy to clipboard
         </v-btn>
         <v-btn class="ml-2" @click.prevent="saveResults" prepend-icon="mdi-content-save" color="primary">

@@ -108,7 +108,7 @@
                   >
                     <v-expansion-panel-text>
                       <div class="text-end">
-                        <v-btn @click.prevent="copyResultsToClipboard" prepend-icon="mdi-clipboard">
+                        <v-btn @click.prevent="copyToClipboard(results.content)" prepend-icon="mdi-clipboard">
                           Copy to clipboard
                         </v-btn>
                       </div>
@@ -125,6 +125,8 @@
   </div>
 </template>
 <script>
+import {copyToClipboard} from "@/lib/utils";
+
 const CHECK_RESULTS_TIME_MS = 1000;
 const CHEK_DOCUMENT_URI = 'urn:chek:vocab/document';
 const RESERVED_PROCESS_IDS = [
@@ -190,6 +192,7 @@ export default {
     };
   },
   methods: {
+    copyToClipboard,
     reset() {
       this.backend.loading = false;
       this.backend.error = false;
@@ -350,11 +353,6 @@ export default {
         if (!this.results.error) {
           this.results.error = typeof e === 'string' ? e : (e.message || true);
         }
-      }
-    },
-    copyResultsToClipboard() {
-      if (this.results.content) {
-        navigator.clipboard.writeText(this.resultText);
       }
     },
     profileFilter(title, query, item) {
