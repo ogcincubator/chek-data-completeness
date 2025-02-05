@@ -1,6 +1,6 @@
 <script setup>
 import { ref, defineProps, computed } from 'vue';
-import { copyToClipboard } from "@/lib/utils.mjs";
+import CopyToClipboardButton from "@/components/CopyToClipboardButton.vue";
 
 const props = defineProps({
   backendUrl: String,
@@ -149,9 +149,7 @@ const errorMessage = computed(() => result.value?.errors[0] || error.value);
     <v-alert v-if="!loading && error" type="error">Error uplifting file: {{ errorMessage }}</v-alert>
     <div class="results" v-if="!loading && resultText">
       <div class="text-end">
-        <v-btn @click.prevent="copyToClipboard(resultText)" prepend-icon="mdi-clipboard" color="primary">
-          Copy to clipboard
-        </v-btn>
+        <copy-to-clipboard-button :text="resultText"></copy-to-clipboard-button>
         <v-btn class="ml-2" @click.prevent="saveResults" prepend-icon="mdi-content-save" color="primary">
           Save to file
         </v-btn>

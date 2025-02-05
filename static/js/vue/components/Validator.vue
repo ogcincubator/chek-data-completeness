@@ -108,9 +108,7 @@
                   >
                     <v-expansion-panel-text>
                       <div class="text-end">
-                        <v-btn @click.prevent="copyToClipboard(results.content)" prepend-icon="mdi-clipboard">
-                          Copy to clipboard
-                        </v-btn>
+                        <copy-to-clipboard-button :text="results.content"></copy-to-clipboard-button>
                       </div>
                       <pre class="border rounded-1 pa-1 my-1 overflow-scroll" style="font-size: 90%; max-height: 400px"><code>{{ resultText }}</code></pre>
                     </v-expansion-panel-text>
@@ -125,7 +123,7 @@
   </div>
 </template>
 <script>
-import {copyToClipboard} from "@/lib/utils.mjs";
+import CopyToClipboardButton from "@/components/CopyToClipboardButton.vue";
 
 const CHECK_RESULTS_TIME_MS = 1000;
 const CHEK_DOCUMENT_URI = 'urn:chek:vocab/document';
@@ -153,6 +151,9 @@ const jsonldToString = (node) => {
 };
 
 export default {
+  components: {
+    CopyToClipboardButton,
+  },
   props: {
     backendUrl: String,
   },
@@ -193,7 +194,6 @@ export default {
     };
   },
   methods: {
-    copyToClipboard,
     reset() {
       this.backend.loading = false;
       this.backend.error = false;
