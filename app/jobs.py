@@ -4,15 +4,13 @@ import json
 import re
 import sys
 from collections import deque
-from dis import spec_op
 from pathlib import Path
 from typing import List, Any
 
 from pyld import jsonld
 from rdflib import Graph, BNode, RDF, Namespace, DCTERMS, Literal
 
-from app import model, util, profiles
-from app.model import InputDescription
+from app import model, util, profiles, rule_template
 from app.profiles import Profile, ProfileLoader
 from app.config import settings
 import uuid
@@ -458,6 +456,34 @@ class SemanticUpliftJob(Job):
         return '_semanticUplift'
 
 
+class RuleTemplateJob(Job):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.input_json = self.parameters.get('inputJson')
+        self.bblock_id = self.parameters.get('bblockId')
+        self.ttl_result = None
+
+    def execute_inner(self):
+        g = rule_template.compile_rule(
+            'https://ogcincubator.github.io/chek-profiles-bblocks/build/register.json',
+            self.bblock_id,
+            self.input_json,
+        )
+        self.ttl_result = g.serialize(format='ttl')
+
+    def get_result(self):
+        result = super().get_result()
+        result['valid'] = self.ttl_result is not None
+        result['data'] = self.ttl_result
+        return result
+
+    @property
+    def process_id(self):
+        return '_ruleTemplate'
+
+
 RESERVED_PROCESSES = {
     '_semanticUplift': {
         'process': model.Process(
@@ -468,7 +494,7 @@ RESERVED_PROCESSES = {
             inputs={
                 'cityFiles': profiles.COMMON_INPUTS['cityFiles'],
                 'outputFormat': model.InputDescription(
-                    schema_=model.Schema(
+                    schema=model.Schema(
                         type='string',
                         title='RDF Format',
                     ),
@@ -477,6 +503,29 @@ RESERVED_PROCESSES = {
         ),
         'class': SemanticUpliftJob,
     },
+    '_ruleTemplate': {
+        'process': model.Process(
+            id='_ruleTemplate',
+            version='0.1',
+            title='Rule template',
+            description='Rule template uplift',
+            inputs={
+                'inputJson': model.InputDescription(
+                    schema=model.Schema(
+                        type='string',
+                        title='Input JSON as string',
+                    ),
+                ),
+                'bblockId': model.InputDescription(
+                    schema=model.Schema(
+                        type='string',
+                        title='Template building block id',
+                    ),
+                ),
+            },
+        ),
+        'class': RuleTemplateJob,
+    }
 }
 
 class JobExecutor:

@@ -6,3 +6,6 @@ pyshacl
 ogc-na @ git+https://github.com/opengeospatial/ogc-na-tools@main#egg=ogc-na
 requests
 jinja2==3.1.4
+cachetools
+jq
+jsonschema
