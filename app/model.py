@@ -302,7 +302,7 @@ class ValidationInputs(Model):
         'extra': 'allow',
     }
 
-    cityFiles: List[InputFile]
+    cityFiles: Optional[List[InputFile]] = []
 
 
 class ValidationExecute(Execute):
