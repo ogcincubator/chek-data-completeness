@@ -91,7 +91,7 @@ const compileTemplate = async () => {
   }
 };
 
-const debouncedCompileTemplate = debounce(compileTemplate, 500);
+const debouncedCompileTemplate = debounce(compileTemplate, 1500);
 watch([inputJson, template], () => {
   if (compileImmediately.value) {
     compileImmediately.value = false;
