@@ -96,7 +96,6 @@ onMounted(() => {
                 <chek-uplift :backend-url="backend.url"></chek-uplift>
               </v-tabs-window-item>
               <v-tabs-window-item value="rule-generator" :transition="false" :reverse-transition="false">
-                Rule generator
                 <chek-rule-generator :backend-url="backend.url"></chek-rule-generator>
               </v-tabs-window-item>
             </v-tabs-window>

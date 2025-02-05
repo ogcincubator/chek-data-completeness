@@ -1,6 +1,6 @@
 <script setup>
 import { ref, defineProps, computed } from 'vue';
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/utils.mjs";
 
 const props = defineProps({
   backendUrl: String,

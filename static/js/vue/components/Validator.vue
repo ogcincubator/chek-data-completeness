@@ -125,12 +125,13 @@
   </div>
 </template>
 <script>
-import {copyToClipboard} from "@/lib/utils";
+import {copyToClipboard} from "@/lib/utils.mjs";
 
 const CHECK_RESULTS_TIME_MS = 1000;
 const CHEK_DOCUMENT_URI = 'urn:chek:vocab/document';
 const RESERVED_PROCESS_IDS = [
   '_semanticUplift',
+  '_ruleTemplate',
 ];
 
 let cityFileId = 0;
