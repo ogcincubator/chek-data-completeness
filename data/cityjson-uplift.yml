@@ -51,7 +51,7 @@ transform:
                 "@type": (if .type then [$GEOM_TYPE, .type] else $GEOM_TYPE end),
                 "boundaries": ({"type": $GEOM_TYPE, "id": "\($OBJECT_ID)_geom_\($IDX)", "references": [$BOUNDARIES | .[$INDEXES | map(if .value == $IDX then .key else empty end) | .[]]]} | processBoundaries)
               }]
-            else [{"@type": $GEOM_TYPE, "boundaries": ({"type": $GEOM_TYPE, "id": "\($OBJECT_ID)_geom_0", "references": $BOUNDARIES} | processBoundaries)}]
+            else [{"@type": [$GEOM_TYPE, "city:NonSemanticSurface"], "boundaries": ({"type": $GEOM_TYPE, "id": "\($OBJECT_ID)_geom_0", "references": $BOUNDARIES} | processBoundaries)}]
             end),
           "lod": "\(.lod)"
         }
