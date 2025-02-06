@@ -6,7 +6,12 @@
           <v-card title="Validation data">
             <v-card-text>
               <v-form @submit.prevent="execute" v-model="formValid" ref="formRef">
+                <v-radio-group v-model="internalShaclSource" label="Load rules from">
+                  <v-radio label="Existing profile" value="profile"></v-radio>
+                  <v-radio label="Manual input" value="inline"></v-radio>
+                </v-radio-group>
                 <v-autocomplete
+                  v-if="internalShaclSource === 'profile'"
                   label="Select a profile for validation"
                   v-model="profileModel"
                   :items="profiles"
@@ -34,6 +39,14 @@
                     <code>{{ item.raw.id }}</code>
                   </template>
                 </v-autocomplete>
+                <v-textarea
+                  v-if="internalShaclSource === 'inline'"
+                  label="Validation SHACL shapes"
+                  class="monospace"
+                  v-model="internalInlineShacl"
+                  rows="15"
+                >
+                </v-textarea>
                 <div v-if="profileReady">
                   <v-file-input
                     v-for="(cityFile, idx) of cityFiles"
@@ -54,30 +67,32 @@
                       </v-btn>
                     </template>
                   </v-file-input>
-                  <h3 v-if="profileFields.length">Parameters</h3>
-                  <template
-                    v-for="(field, idx) of profileFields"
-                    :key="`${profile.id}::${field.name}`"
-                  >
-                    <v-checkbox
-                      v-if="field.type === 'boolean'"
-                      :label="field.label"
-                      v-model="field.value"
-                      :messages="field?.description || ''"
+                  <div v-if="internalShaclSource === 'profile'">
+                    <h3 v-if="profileFields.length">Parameters</h3>
+                    <template
+                      v-for="(field, idx) of profileFields"
+                      :key="`${profile.id}::${field.name}`"
                     >
-                    </v-checkbox>
-                    <v-text-field
-                      v-else
-                      :label="field.name"
-                      v-model="field.value"
-                      :messages="field?.description || ''"
-                      :rules="field.required ? [rules.required] : []"
-                      :class="{required: field.required}"
-                      validate-on="input"
-                      class="process-input"
-                    >
-                    </v-text-field>
-                  </template>
+                      <v-checkbox
+                        v-if="field.type === 'boolean'"
+                        :label="field.label"
+                        v-model="field.value"
+                        :messages="field?.description || ''"
+                      >
+                      </v-checkbox>
+                      <v-text-field
+                        v-else
+                        :label="field.name"
+                        v-model="field.value"
+                        :messages="field?.description || ''"
+                        :rules="field.required ? [rules.required] : []"
+                        :class="{required: field.required}"
+                        validate-on="input"
+                        class="process-input"
+                      >
+                      </v-text-field>
+                    </template>
+                  </div>
                   <div class="mt-4">
                     <v-btn :loading="results.loading" type="submit" color="primary" prepend-icon="mdi-play">Validate</v-btn>
                     <v-btn v-if="results.loading" @click.prevent="resetResults" color="secondary" class="ml-2">Cancel</v-btn>
@@ -130,6 +145,7 @@ const CHEK_DOCUMENT_URI = 'urn:chek:vocab/document';
 const RESERVED_PROCESS_IDS = [
   '_semanticUplift',
   '_ruleTemplate',
+  '_shaclValidation',
 ];
 
 let cityFileId = 0;
@@ -156,6 +172,14 @@ export default {
   },
   props: {
     backendUrl: String,
+    inlineShacl: {
+      type: String,
+      default: '',
+    },
+    shaclSource: {
+      type: String,
+      default: 'profile',
+    },
   },
   data() {
     return {
@@ -191,13 +215,17 @@ export default {
         required: value => !!value || 'This field is required',
         fileRequired: value => (!!value && !!value.length) || 'At least one file is required',
       },
+      internalInlineShacl: this.inlineShacl,
+      internalShaclSource: this.shaclSource,
     };
   },
   methods: {
     reset() {
+      this.profileModel = null;
       this.backend.loading = false;
       this.backend.error = false;
       this.profile.id = null;
+      this.profileFields.length = 0;
       this.profileCache = {};
       this.cityFiles = [{
         id: ++cityFileId,
@@ -258,9 +286,15 @@ export default {
         requestData.inputs[field.name] = field.value;
       }
 
+      let profileId = this.profile?.id;
+      if (this.internalShaclSource === 'inline') {
+        profileId = '_shaclValidation';
+        requestData.inputs.shacl = this.internalInlineShacl;
+      }
+
       this.results.loading = true;
       try {
-        let response = await fetch(new URL(`processes/${this.profile.id}/execution`, this.backendUrl), {
+        let response = await fetch(new URL(`processes/${profileId}/execution`, this.backendUrl), {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
@@ -368,7 +402,7 @@ export default {
       return !this.backend.error && this.backendUrl;
     },
     profileReady() {
-      return this.backendReady && !this.profile.error && this.profile.id;
+      return this.backendReady && (this.internalShaclSource === 'inline' || (!this?.profile.error && this?.profile.id));
     },
     showResults() {
       return this.results.loading || this.results.error || this.results.content;
@@ -444,7 +478,7 @@ export default {
       }
 
       return result;
-    }
+    },
   },
   watch: {
     backendUrl: {
@@ -454,8 +488,15 @@ export default {
       },
     },
     async profileModel(profile) {
-      const profileId = profile.id;
       this.profile.error = false;
+
+      if (!profile) {
+        this.profile.id = null;
+        this.profile.data = null;
+        return;
+      }
+
+      const profileId = profile.id;
 
       if (this.profileCache[profileId]) {
         this.profile.id = profileId;
@@ -494,6 +535,19 @@ export default {
           }
         }
       }
+    },
+    shaclSource(v) {
+      this.internalShaclSource = v;
+    },
+    internalShaclSource(v) {
+      this.reset();
+      this.$emit('update:shaclSource', v);
+    },
+    inlineShacl(v) {
+      this.internalInlineShacl = v;
+    },
+    internalInlineShacl(v) {
+      this.$emit('update:inlineShacl', v);
     },
   },
 }

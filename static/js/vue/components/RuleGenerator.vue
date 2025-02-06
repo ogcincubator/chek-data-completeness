@@ -149,6 +149,7 @@ watch([inputJson, template], () => {
             </v-textarea>
             <div class="d-flex justify-end mt-1">
               <copy-to-clipboard-button :text="outputTtl"></copy-to-clipboard-button>
+              <v-btn class="ml-1" @click="$emit('useInValidator', outputTtl)">Use in validator</v-btn>
             </div>
           </div>
         </v-col>

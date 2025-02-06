@@ -70,6 +70,7 @@ class Job:
         self.finished = None
 
         self.parameters = parameters
+        self._process_id = kwargs.pop('process_id', None)
         self.args = args
         self.kwargs = kwargs
 
@@ -117,7 +118,7 @@ class Job:
 
     @property
     def process_id(self):
-        return 'GenericJob'
+        return self._process_id or 'GenericJob'
 
 class ProfileJob(Job):
 
@@ -132,6 +133,8 @@ class ProfileJob(Job):
         super().__init__(job_id, parameters=parameters)
 
         self.profile_loader = profile_loader
+
+        self.is_direct_validator = kwargs.get('profile_id') == '_shaclValidation'
 
         self.val3dity_result = True
         self.shacl_result = True
@@ -158,41 +161,44 @@ class ProfileJob(Job):
 
     def execute_inner(self):
 
-        loaded_profile_uris = set()
-        pending_profiles = deque(self.profiles)
-
         # 1. Fetch SHACL rules
-        shacl_graph = Graph()
-        while pending_profiles:
-            profile = pending_profiles.popleft()
-            if profile.uri in loaded_profile_uris:
-                continue
-            for resource in profile.resources:
-                if (resource.role != 'prof-role:validation'
-                        or resource.conformsTo != 'https://www.w3.org/TR/shacl/'):
-                    continue
-                for artifact in resource.artifacts:
-                    public_id = 'urn:check:shacl/doc' if not re.match(r'^https?://', artifact) else artifact
-                    shacl_graph.parse(artifact, format='ttl', publicID=public_id)
-            for profile_of_uri in profile.profileOf:
-                if profile_of_uri in loaded_profile_uris or profile_of_uri in ('urn:chek:profiles/chek',
-                                                                               'chekp:chek'):
-                    continue
-                profile_of = None
-                if self.profile_loader:
-                    profile_of = self.profile_loader.profiles_by_uri.get(profile_of_uri)
-                if profile_of:
-                    pending_profiles.append(profile_of)
-                else:
-                    self.warnings.append({
-                        'type': 'ProfileNotFound',
-                        'uri': profile_of_uri,
-                        'message': f"Profile {profile_of_uri} not found",
-                    })
-            loaded_profile_uris.add(profile.uri)
-
         shacl_filename = self.wd / "shacl.ttl"
-        shacl_graph.serialize(shacl_filename)
+        if self.is_direct_validator:
+            with open(shacl_filename, 'w') as f:
+                f.write(self.parameters.pop('shacl'))
+        else:
+            loaded_profile_uris = set()
+            pending_profiles = deque(self.profiles)
+            shacl_graph = Graph()
+            while pending_profiles:
+                profile = pending_profiles.popleft()
+                if profile.uri in loaded_profile_uris:
+                    continue
+                for resource in profile.resources:
+                    if (resource.role != 'prof-role:validation'
+                            or resource.conformsTo != 'https://www.w3.org/TR/shacl/'):
+                        continue
+                    for artifact in resource.artifacts:
+                        public_id = 'urn:check:shacl/doc' if not re.match(r'^https?://', artifact) else artifact
+                        shacl_graph.parse(artifact, format='ttl', publicID=public_id)
+                for profile_of_uri in profile.profileOf:
+                    if profile_of_uri in loaded_profile_uris or profile_of_uri in ('urn:chek:profiles/chek',
+                                                                                   'chekp:chek'):
+                        continue
+                    profile_of = None
+                    if self.profile_loader:
+                        profile_of = self.profile_loader.profiles_by_uri.get(profile_of_uri)
+                    if profile_of:
+                        pending_profiles.append(profile_of)
+                    else:
+                        self.warnings.append({
+                            'type': 'ProfileNotFound',
+                            'uri': profile_of_uri,
+                            'message': f"Profile {profile_of_uri} not found",
+                        })
+                loaded_profile_uris.add(profile.uri)
+
+            shacl_graph.serialize(shacl_filename)
 
         # 2. Convert to CityJSON
         for city_file in self.city_files:
@@ -301,6 +307,7 @@ class ProfileJob(Job):
         shacl_output = output_ttl_file.with_name('city-shacl-result.json')
         shacl_process = subprocess.run([
             'pyshacl',
+            '-a',
             '-s',
             str(shacl_filename),
             '-f',
@@ -311,7 +318,11 @@ class ProfileJob(Job):
         ])
         self.shacl_result = shacl_process.returncode == 0
         with open(shacl_output) as f:
-            self.shacl_report = jsonld.frame(json.load(f), SHACL_RESULT_FRAME)
+            shacl_report_text = f.read()
+        try:
+            self.shacl_report = jsonld.frame(json.loads(shacl_report_text), SHACL_RESULT_FRAME)
+        except Exception as e:
+            raise Exception(f'Error running SHACL validation: {shacl_report_text}') from e
 
         self.status = model.StatusCode.successful
 
@@ -339,7 +350,7 @@ class ProfileJob(Job):
 
     @property
     def process_id(self):
-        return ','.join(p.get_id() for p in self.profiles)
+        return ','.join(p.get_id() for p in self.profiles) if self.profiles else super().process_id
 
 
 class SemanticUpliftJob(Job):
@@ -525,7 +536,25 @@ RESERVED_PROCESSES = {
             },
         ),
         'class': RuleTemplateJob,
-    }
+    },
+    '_shaclValidation': {
+        'process': model.Process(
+            id='_shaclValidation',
+            version='0.1',
+            title='SHACL validation',
+            description='Direct SHACL validation of CityJSON/CityGML documents (without using profiles)',
+            inputs={
+                'cityFiles': profiles.COMMON_INPUTS['cityFiles'],
+                'shacl': model.InputDescription(
+                    schema=model.Schema(
+                        type='string',
+                        title='SHACL shapes in RDF/Turtle format',
+                    ),
+                ),
+            },
+        ),
+        'class': ProfileJob,
+    },
 }
 
 class JobExecutor:
@@ -541,7 +570,11 @@ class JobExecutor:
         job = None
         for req_profile in profile_ids:
             if req_profile in RESERVED_PROCESSES:
-                job = RESERVED_PROCESSES[req_profile]['class'](job_id, city_files=city_files, parameters=parameters)
+                job = RESERVED_PROCESSES[req_profile]['class'](job_id,
+                                                               city_files=city_files,
+                                                               parameters=parameters,
+                                                               profile_id=req_profile)
+                break
         if not job:
             profiles = [profile_loader.profiles[pid] for pid in profile_ids]
             job = ProfileJob(job_id, city_files, profiles=profiles, parameters=parameters, profile_loader=profile_loader)

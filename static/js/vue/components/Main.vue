@@ -21,6 +21,9 @@ const backend = reactive({
 });
 const backendReady = computed(() => !backend.loading && !backend.error && !!backend.url);
 
+const validatorShaclSource = ref('profile');
+const validatorInlineShacl = ref('');
+
 const reset = () => {
   backend.error = false;
   backend.url = null;
@@ -53,6 +56,12 @@ onMounted(() => {
   backendUrlModel.value = props.baseUrl;
   loadBackend();
 });
+
+const setManualShacl = (ttl) => {
+  currentTab.value = 'validator';
+  validatorInlineShacl.value = ttl;
+  validatorShaclSource.value = 'inline';
+};
 
 </script>
 <template>
@@ -90,13 +99,20 @@ onMounted(() => {
           <v-card-text>
             <v-tabs-window v-model="currentTab">
               <v-tabs-window-item value="validator" :transition="false" :reverse-transition="false">
-                <chek-validator :backend-url="backend.url"></chek-validator>
+                <chek-validator
+                  :inline-shacl="validatorInlineShacl"
+                  :shacl-source="validatorShaclSource"
+                  :backend-url="backend.url"
+                ></chek-validator>
               </v-tabs-window-item>
               <v-tabs-window-item value="uplift" :transition="false" :reverse-transition="false">
                 <chek-uplift :backend-url="backend.url"></chek-uplift>
               </v-tabs-window-item>
               <v-tabs-window-item value="rule-generator" :transition="false" :reverse-transition="false">
-                <chek-rule-generator :backend-url="backend.url"></chek-rule-generator>
+                <chek-rule-generator
+                  :backend-url="backend.url"
+                  @useInValidator="setManualShacl"
+                ></chek-rule-generator>
               </v-tabs-window-item>
             </v-tabs-window>
           </v-card-text>
