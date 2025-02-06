@@ -11,7 +11,6 @@ const props = defineProps({
     default: 'Copy to clipboard',
   },
   text: {
-    type: String,
   },
 });
 
@@ -20,7 +19,11 @@ let timeout = null;
 
 const copy = () => {
   clearTimeout(timeout);
-  copyToClipboard(props.text);
+  let text = props.text;
+  if (typeof text !== 'string') {
+    text = JSON.stringify(text, null , 2);
+  }
+  copyToClipboard(text);
   showTooltip.value = true;
   timeout = setTimeout(() => showTooltip.value = false, 2000);
 };
