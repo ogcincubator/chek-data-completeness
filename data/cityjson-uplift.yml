@@ -235,6 +235,9 @@ context:
           '@id': city:hasChild
           '@type': '@id'
 
+    geojson:coordinates:
+      '@container': '@list'
+
     'city:x':
       '@id': city:x
       '@type': xsd:decimal
