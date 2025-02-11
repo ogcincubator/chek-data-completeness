@@ -1,5 +1,5 @@
 <script setup>
-import {ref, reactive, computed, defineProps, onMounted} from 'vue';
+import {ref, reactive, computed, defineProps, onMounted, watchEffect} from 'vue';
 import ChekValidator from '@/components/Validator.vue';
 import ChekUplift from '@/components/Uplift.vue';
 import ChekRuleGenerator from '@/components/RuleGenerator.vue';
@@ -12,6 +12,12 @@ const tabs = ref([
   { value: 'rule-generator', label: 'Rule generator' },
 ]);
 const currentTab = ref(tabs.value[0].value);
+if (location.hash?.length) {
+  const hash = location.hash.replace(/^#/, '');
+  if (tabs.value.map(t => t.value).includes(hash)) {
+    currentTab.value = hash;
+  }
+}
 
 const backendUrlModel = ref('');
 const backend = reactive({
@@ -62,6 +68,15 @@ const setManualShacl = (ttl) => {
   validatorInlineShacl.value = ttl;
   validatorShaclSource.value = 'inline';
 };
+
+watchEffect(() => {
+  if (currentTab.value) {
+    const newHash = '#' + currentTab.value;
+    if (location.hash !== newHash) {
+      history.pushState(null, null, newHash);
+    }
+  }
+});
 
 </script>
 <template>
