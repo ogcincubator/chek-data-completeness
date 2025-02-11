@@ -67,6 +67,9 @@ const compileTemplate = async () => {
   lastProcessedInput = inputJson.value;
   ruleError.value = null;
   ruleResult.value = null;
+  if (!inputJson.value?.trim()?.length) {
+    return;
+  }
   try {
     JSON.parse(inputJson.value);
   } catch (e) {
