@@ -114,8 +114,9 @@
                   <!-- validation errors table -->
                   <v-alert v-if="results.error" type="error">
                     An error was encountered while attempting validation ({{ resultsError }}).
-
                   </v-alert>
+                  <v-data-table v-if="validationErrors && extractedErrors?.length" :items="extractedErrors">
+                  </v-data-table>
                 </div>
                 <v-expansion-panels v-if="resultsReady">
                   <v-expansion-panel
