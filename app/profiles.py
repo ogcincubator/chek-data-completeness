@@ -222,14 +222,26 @@ def _load_bblocks_profiles(source: str) -> list[Profile]:
         register = r.json()
         for bblock in register['bblocks']:
             bblock_id = bblock['itemIdentifier']
-            if not bblock.get('rdfData') or 'chek-validation-profile' not in bblock.get('tags', []):
+            if 'chek-validation-profile' not in bblock.get('tags', []):
                 continue
             g = Graph()
-            for d in bblock['rdfData']:
+            for d in bblock.get('rdfData', []):
                 g.parse(d)
             profile_obj = jsonld.frame(json.loads(g.serialize(format='json-ld')),
                                        LOAD_PROFILES_FRAME)
+            profile_obj.setdefault('uri', f"urn:ogc:bblocks/{bblock_id}")
+            prof_types = ['prof:Profile', 'chekp:Profile']
+            if not profile_obj.get('@type'):
+                profile_obj['@type'] = 'prof:Profile', 'urn:chek:profiles/Profile'
+            elif isinstance(profile_obj['@type'], str):
+                profile_obj['@type'] = [profile_obj['@type']] + prof_types
+            else:
+                profile_obj['@type'] += prof_types
+
             profile_obj.setdefault('profileOf', []).append('urn:chek:profiles/chek')
+            profile_obj.setdefault('title', bblock['name'])
+            profile_obj.setdefault('description', bblock.get('abstract'))
+            profile_obj.setdefault('version', bblock['version'])
             profile_obj['token'] = bblock_id
             profile_obj['resources'] = [{
                 'role': 'prof-role:validation',
