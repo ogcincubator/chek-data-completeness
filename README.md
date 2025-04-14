@@ -55,6 +55,19 @@ variable:
 docker run --pull=always -p 8080:8080 -e ROOT_PATH=/my-subpath/ ghcr.io/ogcincubator/chek-data-completeness
 ```
 
+### Behind a proxy
+
+If you are hosting the service behind a reverse proxy (and especially if it is an **HTTPS to HTTP** proxy),
+you may need to modify the `FORWARDED_ALLOW_IPS` environment variable. `FORWARDED_ALLOW_IPS` contains a 
+whitelist of IP addresses for which the standard HTTP reverse proxy headers (e.g., `X-Forwarded-For`,
+`X-Forwarded-Proto`, etc.) will be allowed. By default, this value is `127.0.0.1` (localhost).
+
+Keep in mind that the IP addresses inside Docker (either when the reverse proxy is another container,
+or when the reverse proxy is running on the host or on another machine) may be different, so `127.0.0.1`
+may not apply. 
+
+The special value `*` can be used to whitelist all client hosts.
+
 ## Configuration
 
 The application can be configured by using environment variables and/or a `.env` file (with the former taking

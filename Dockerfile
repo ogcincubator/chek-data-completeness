@@ -43,5 +43,6 @@ COPY . ./
 ENV CITYGML_TOOLS="/opt/citygml-tools/citygml-tools"
 ENV VAL3DITY="/usr/bin/val3dity"
 ENV ROOT_PATH=""
+ENV FORWARDED_ALLOW_IPS="127.0.0.1"
 
 CMD ["bash", "-c", "fastapi run app/main.py --proxy-headers --port 8080 --root-path \"${ROOT_PATH%/}\""]
