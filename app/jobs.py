@@ -305,24 +305,27 @@ class ProfileJob(Job):
 
         # 5. SHACL
         shacl_output = output_ttl_file.with_name('city-shacl-result.json')
-        shacl_process = subprocess.run([
-            'pyshacl',
-            '-a',
-            '-s',
-            str(shacl_filename),
-            '-f',
-            'json-ld',
-            '-o',
-            str(shacl_output),
-            str(output_ttl_file),
-        ])
+        shacl_process = subprocess.run(
+            [
+                'python3',
+                './app/shacl_validate.py',
+                str(output_ttl_file),
+                str(shacl_filename),
+                str(shacl_output),
+            ],
+            capture_output=True,
+            text=True
+        )
         self.shacl_result = shacl_process.returncode == 0
-        with open(shacl_output) as f:
-            shacl_report_text = f.read()
-        try:
-            self.shacl_report = jsonld.frame(json.loads(shacl_report_text), SHACL_RESULT_FRAME)
-        except Exception as e:
-            raise Exception(f'Error running SHACL validation: {shacl_report_text}') from e
+        if self.shacl_result:
+            with open(shacl_output) as f:
+                shacl_report_text = f.read()
+            try:
+                self.shacl_report = jsonld.frame(json.loads(shacl_report_text), SHACL_RESULT_FRAME)
+            except Exception as e:
+                raise Exception(f'Error running SHACL validation: {shacl_report_text}') from e
+        else:
+            raise Exception(f'Error running SHACL validation: {shacl_process.stderr}')
 
         self.status = model.StatusCode.successful
 
