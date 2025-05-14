@@ -39,7 +39,7 @@ transform:
 
     .CityObjects |= [
       to_entries | .[]
-      | .value.parents |= if . then map("#:city-objects-\(.)") else empty end
+      | .value.parents |= if . then map("#city-objects-\(.)") else empty end
       | { "@id": "#city-objects-\(.key | @uri)", "dct:identifier": .key } + .value
       | ."@id" as $OBJECT_ID
       | .geometry |= if . then ([ .[] |
