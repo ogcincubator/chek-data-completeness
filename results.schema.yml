@@ -1,0 +1,230 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+description: CHEK completeness validator results
+
+$defs:
+  shaclReport:
+    type: object
+    properties:
+      '@context':
+        description: JSON-LD context
+      conforms:
+        type: boolean
+        description: Whether the SHACL validaton passed
+      result:
+        description: List of constraint violations encountered
+        type: array
+        items:
+          $ref: '#/$defs/shaclResultEntry'
+          
+  shaclResultEntry:
+    type: object
+    required: [focusNode, resultMessage, resultSeverity]
+    properties:
+      '@type':
+        const: ValidationResult
+      focusNode:
+        description: The URI for the RDF resource that this error was detected on. The special "urn:chek:vocab/document" URI can be used to refer to the whole document.
+        type: string
+      resultMessage:
+        description: Descriptive (user-friendly) error message
+        type: string
+      resultPath:
+        description: The SHACL property path that triggered the validation error. It is rule-dependent.
+        type: array
+        items:
+          type: string
+      resultSeverity:
+        description: Severity of the validation error. See https://www.w3.org/TR/shacl/#severity
+        type: string
+        oneOf:
+          - const: shacl:Info
+            description: A non-critical constraint violation indicating an informative message.
+          - const: shacl:Warning
+            description: A non-critical constraint violation indicating a warning.
+          - const: shacl:Violation
+            description: A constraint violation.
+      sourceConstraint:
+        description: Metadata about the constraint that encountered the violation
+        type: object
+        properties:
+          select:
+            description: SPARQL select query for the constraint
+            type: string
+      sourceConstraintComponent:
+        description: Metadta about the type of constraint that encountered the violation
+        type: object
+        properties:
+          '@id':
+            description: URI for the type of constraint component. See the SHACL specification for a complete list of values.
+            type: string
+        
+      value:
+        description: Additional value returned by the validating constraint
+        
+  fileValidationEntry:
+    description: Individual file validation entry
+    type: object
+    required: [fileIndex, valid, val3dityReport]
+    properties:
+      fileIndex:
+        description: 0-based index for the file (depending on input order)
+        type: integer
+      name:
+        description: Input file name (as provided by client)
+        type: string
+      valid:
+        description: Whether the file passed validation
+        type: boolean
+      val3dityReport:
+        description: Full val3dity report for the file
+        $ref: '#/$defs/val3dityReport'
+  
+  val3dityReport:
+    type: object
+    properties:
+      validity:
+        description: Whether the file is valid according to val3dity
+        type: boolean
+      type:
+        const: val3dity_report
+      all_errors:
+        description: List of individual error codes encountered when validating file geometries. See https://val3dity.readthedocs.io/2.5.1/errors.html
+        type: array
+        items:
+          type: integer
+      dataset_errors:
+        description: List of dataset processing errors. See https://val3dity.readthedocs.io/2.5.1/errors.html
+        type: array
+        items:
+          type: integer
+      features_overview:
+        description: Summary of the features found in the file, one entry per city object type
+        type: array
+        items:
+          type: object
+          required: [total, type, valid]
+          properties:
+            total:
+              description: Total number of features
+              type: integer
+            type:
+              description: Feature type
+              type: string
+            valid:
+              description: Number of valid features
+              type: integer
+      features:
+        description: Individual report for each of the features found in the file
+        type: array
+        items:
+          type: object
+          required: [id, type, validity, errors]
+          properties:
+            id:
+              description: Identifier for the resource
+              type: string
+            type:
+              description: Resource type
+              type: string
+            validity:
+              type: boolean
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  description:
+                    type: string
+                  id:
+                    type: string
+                  info:
+                    type: string
+                  type:
+                    type: string
+            primitives:
+              type: [array, 'null']
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  numberfaces:
+                    type: integer
+                  numbervertices:
+                    type: integer
+                  numbershells:
+                    type: integer
+                  type:
+                    type: string
+                  validity:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      required: [code, description, id, info, type]
+                      properties:
+                        code:
+                          type: integer
+                        description:
+                          type: string
+                        id:
+                          type: string
+                        info:
+                          type: string
+                        type:
+                          type: string
+                    default: []
+      primitives_overview:
+        description: Summary of the primitives found and validated
+        type: array
+        items:
+          type: object
+          required: [total, type, valid]
+          properties:
+            total:
+              description: Total number of primitives
+              type: integer
+            type:
+              description: Primitive type
+              type: string
+            valid:
+              description: Number of valid primitives
+              type: integer
+      val3dity_version:
+        description: Version of val3dity used for validation
+        type: string
+
+type: object
+required: [valid]
+properties:
+  valid:
+    type: boolean
+    description: The global result for the validation
+oneOf:
+  - description: Returned for properly formatted input files
+    required: [val3dityResult, shaclResult, shaclReport, fileValidation]
+    properties:
+      val3dityResult:
+        type: boolean
+        description: Whether the val3dity validation succeeded
+      shaclResult:
+        type: boolean
+        description: Whether the SHACL validation (data completeness checks) succeeded
+      shaclReport:
+        description: Full SHACL validation report
+        $ref: '#/$defs/shaclReport'
+      fileValidation:
+        description: Individual file validation results
+        type: array
+        items:
+          $ref: '#/$defs/fileValidationEntry'
+  - description: Returned for parsing validation errors (e.g., incorrect file format)
+    required: [errors]
+    properties:
+      errors:
+        type: array
+        items:
+          type: string
