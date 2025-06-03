@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, HTTPException, Response, BackgroundTasks, 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app import model, util
 from app.config import settings
@@ -34,6 +35,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     **app_metadata,
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins='*',
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
