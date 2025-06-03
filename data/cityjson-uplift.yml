@@ -28,7 +28,7 @@ transform:
       "geometry": null,
       "topology": {
         "type": $TOPO_TYPE,
-        "references": (if (.type == "MultiPoint" or .type == "LineString") then (.references | map("#vertices-\(.)")) else (.references | to_entries | map({
+        "references": (if (.type == "MultiPoint" or .type == "LineString") then (.references | map("v:\(.)")) else (.references | to_entries | map({
             "type": $NEXT_TYPE,
             "id": (if $ID then "\($ID)_\(.key + 1)" else empty end),
             "references": .value
@@ -39,8 +39,9 @@ transform:
 
     .CityObjects |= [
       to_entries | .[]
-      | .value.parents |= if . then map("#city-objects-\(.)") else empty end
-      | { "@id": "#city-objects-\(.key | @uri)", "dct:identifier": .key } + .value
+      | .value.parents |= if . then map("c:\(.)") else empty end
+      | .value.children |= if . then map("c:\(.)") else empty end
+      | { "@id": "c:\(.key | @uri)", "dct:identifier": .key } + .value
       | ."@id" as $OBJECT_ID
       | .geometry |= if . then ([ .[] |
         .type as $GEOM_TYPE | .boundaries as $BOUNDARIES | (try (.semantics.values | to_entries) catch []) as $INDEXES
@@ -69,7 +70,7 @@ transform:
       "city:max": .[3:6] | to_coords
     } else empty end
     | .vertices |= [to_entries | .[] | { 
-        "@id": "#vertices-\(.key | @uri)",
+        "@id": "v:\(.key | @uri)",
         "type": "Feature",
         "geometry": {
           "@type": "Point",
@@ -80,8 +81,9 @@ transform:
   # Add base and prefix for it
   - |
     ."@context" = {
-      "@base": "urn:city-validator:input-files/\($file_idx)/",
-      "c": "urn:city-validator:input-files/\($file_idx)/"
+      "@base": "urn:city-validator:input-files/\($file_idx)/city-objects/",
+      "c": "urn:city-validator:input-files/\($file_idx)/city-objects/",
+      "v": "urn:city-validator:input-files/\($file_idx)/vertices/"
     }
 
 context:
