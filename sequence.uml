@@ -1,0 +1,32 @@
+@startuml
+
+skinparam dpi 300
+
+== Fetching profile metadata ==
+
+Client -> Service: GET /processes
+Service --> Client: ProcessList
+
+Client -> Service: GET /process/[profileID]
+Service --> Client: Process
+
+== Executing profile ==
+
+Client -> Service: POST /process/[profileID]/execution (ValidationExecute)
+note right
+  Contains jobID
+end note
+Service --> Client: StatusInfo
+
+== Retrieving results ==
+
+loop until job status is finished
+  Client -> Service: GET /jobs/[jobID]
+  Service --> Client: StatusInfo
+end
+
+Client -> Service: GET /jobs/[jobID]/results
+Service --> Client: ValidationReport
+
+
+@enduml
