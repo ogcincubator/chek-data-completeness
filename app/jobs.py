@@ -552,6 +552,86 @@ class RuleTemplateJob(Job):
     def process_id(self):
         return '_citygml2cityjson'
 
+class ToGLBJob(Job):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        city_file : model.InputFile = self.kwargs.get('city_files')[0]
+        output_fn = self.wd / f"input_city.0.json"
+        is_cityjson = True
+        if util.is_xml(city_file.data_str):
+            # Convert to CityJSON
+            output_fn = output_fn.with_suffix('.gml')
+            is_cityjson = False
+        city_file.write_to(output_fn)
+        self.city_file = FileResult(
+            index=0,
+            path=output_fn,
+            input_file=city_file,
+            is_cityjson=is_cityjson,
+        )
+        self.path = self.city_file.path
+
+        self.output_file = None
+
+    def execute_inner(self):
+        city_file = self.city_file
+
+        # 1. Convert to CityJSON
+        if not city_file.is_cityjson:
+            subprocess_result = subprocess.run(
+                [
+                    settings.citygml_tools,
+                    'to-cityjson',
+                    str(city_file.path),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            if subprocess_result.returncode:
+                errors = subprocess_result.stderr
+                errors += '\n'.join(line
+                                    for line in subprocess_result.stdout.splitlines()
+                                    if 'ERROR]' in line)
+                raise Exception(f"Error converting input file {city_file.index} to CityJSON: {errors}")
+            city_file.path = city_file.path.with_suffix('.json')
+            city_file.is_cityjson = True
+
+        # 2. Transform to GLB
+        output_file = city_file.path.with_suffix('.glb')
+        subprocess_result = subprocess.run(
+            [
+                'python3',
+                './app/glb.py',
+                str(city_file.path),
+                str(output_file),
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if subprocess_result.returncode:
+            print(subprocess_result.stdout, file=sys.stderr)
+            raise Exception(f"Error transforming input file {city_file.index} to GLB")
+
+        self.output_file = output_file
+
+    def get_result(self):
+        result = super().get_result()
+        if self.valid:
+            with open(self.output_file) as f:
+                data = f.read()
+            result.update({
+                'filename': self.output_file.name,
+                'data': data,
+            })
+        return result
+
+    @property
+    def process_id(self):
+        return '_toglb'
+
 
 RESERVED_PROCESSES = {
     '_semanticUplift': {
@@ -614,17 +694,29 @@ RESERVED_PROCESSES = {
         'class': ProfileJob,
     },
     '_citygml2cityjson': {
-            'process': model.Process(
-                id='_citygml2cityjson',
-                version='0.1',
-                title='CityGML to CityJSON',
-                description='Converts CityGML to CityJSON using citygml-tools',
-                inputs={
-                    'cityFiles': profiles.COMMON_INPUTS['cityFiles'],
-                },
-            ),
-            'class': CityGML2CityJSONJob,
-        },
+        'process': model.Process(
+            id='_citygml2cityjson',
+            version='0.1',
+            title='CityGML to CityJSON',
+            description='Converts CityGML to CityJSON using citygml-tools',
+            inputs={
+                'cityFiles': profiles.COMMON_INPUTS['cityFiles'],
+            },
+        ),
+        'class': CityGML2CityJSONJob,
+    },
+    '_toglb': {
+        'process': model.Process(
+            id='_toglb',
+            version='0.1',
+            title='CityJSON/CityGML to GLB',
+            description='Converts CityJSON or CityGML files into base-64 encoded GLB',
+            inputs={
+                'cityFiles': profiles.COMMON_INPUTS['cityFiles'],
+            },
+        ),
+        'class': ToGLBJob,
+    },
 }
 
 class JobExecutor:
