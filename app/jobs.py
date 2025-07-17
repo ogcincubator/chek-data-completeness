@@ -108,8 +108,8 @@ class Job:
         # noop
         pass
 
-    def get_result(self):
-        result = {
+    def get_result(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
             'valid': self.valid,
         }
         if self.warnings:
@@ -470,6 +470,61 @@ class SemanticUpliftJob(Job):
         return '_semanticUplift'
 
 
+class CityGML2CityJSONJob(Job):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        city_file : model.InputFile = self.kwargs.get('city_files')[0]
+        output_fn = self.wd / f"input_city.0.gml"
+        city_file.write_to(output_fn)
+        self.city_file = FileResult(
+            index=0,
+            path=output_fn,
+            input_file=city_file,
+            is_cityjson=False,
+        )
+        self.path = self.city_file.path
+
+        self.output_file = None
+
+    def execute_inner(self):
+        city_file = self.city_file
+
+        # Convert to CityJSON
+        subprocess_result = subprocess.run(
+            [
+                settings.citygml_tools,
+                'to-cityjson',
+                str(city_file.path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if subprocess_result.returncode:
+            errors = subprocess_result.stderr
+            errors += '\n'.join(line
+                                for line in subprocess_result.stdout.splitlines()
+                                if 'ERROR]' in line)
+            raise Exception(f"Error converting input file {city_file.index} to CityJSON: {errors}")
+        self.output_file = city_file.path.with_suffix('.json')
+
+    def get_result(self):
+        result = super().get_result()
+        if self.valid:
+            with open(self.output_file) as f:
+                data = f.read()
+            result.update({
+                'filename': self.output_file.name,
+                'data': data,
+            })
+        return result
+
+    @property
+    def process_id(self):
+        return '_semanticUplift'
+
+
 class RuleTemplateJob(Job):
 
     def __init__(self, *args, **kwargs):
@@ -495,7 +550,7 @@ class RuleTemplateJob(Job):
 
     @property
     def process_id(self):
-        return '_ruleTemplate'
+        return '_citygml2cityjson'
 
 
 RESERVED_PROCESSES = {
@@ -558,6 +613,18 @@ RESERVED_PROCESSES = {
         ),
         'class': ProfileJob,
     },
+    '_citygml2cityjson': {
+            'process': model.Process(
+                id='_citygml2cityjson',
+                version='0.1',
+                title='CityGML to CityJSON',
+                description='Converts CityGML to CityJSON using citygml-tools',
+                inputs={
+                    'cityFiles': profiles.COMMON_INPUTS['cityFiles'],
+                },
+            ),
+            'class': CityGML2CityJSONJob,
+        },
 }
 
 class JobExecutor:
