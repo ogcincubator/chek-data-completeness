@@ -26,7 +26,7 @@ COPY --from=val3dity_builder /src/val3dity/build/val3dity /usr/bin/val3dity
 WORKDIR /opt
 
 RUN apt update \
-    && apt-get install -y libboost-filesystem1.83 libgeos-c1t64 wget unzip python3-pip git
+    && apt-get install -y libboost-filesystem1.83 libgeos-c1t64 wget unzip python3-pip python3-venv git
 
 RUN wget "${CITYGML_TOOLS}" -O /tmp/citygml-tools.zip \
     && unzip /tmp/citygml-tools.zip \
@@ -36,7 +36,8 @@ WORKDIR /app
 
 COPY requirements.txt ./
 
-RUN pip install --no-cache-dir --upgrade -r requirements.txt --break-system-packages
+RUN python3 -m venv /venv && \
+    /venv/bin/python3 -m pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY . ./
 
@@ -45,4 +46,4 @@ ENV VAL3DITY="/usr/bin/val3dity"
 ENV ROOT_PATH=""
 ENV FORWARDED_ALLOW_IPS="127.0.0.1"
 
-CMD ["bash", "-c", "fastapi run app/main.py --proxy-headers --port 8080 --root-path \"${ROOT_PATH%/}\""]
+CMD ["bash", "-c", "/venv/bin/python3 -m fastapi_cli run app/main.py --proxy-headers --port 8080 --root-path \"${ROOT_PATH%/}\""]
