@@ -247,7 +247,7 @@ def _load_bblocks_profiles(source: str) -> list[Profile]:
                 'role': 'prof-role:validation',
                 'conformsTo': 'https://www.w3.org/TR/shacl/',
                 'format': 'https://w3id.org/mediatype/text/turtle',
-                'artifacts': [s for s in bblock.get('shaclRules', {}).get(bblock_id, [])],
+                'artifacts': [s for s in bblock.get('shaclShapes', {}).get(bblock_id, [])],
             }]
             profiles[bblock['itemIdentifier']] = Profile.model_validate(profile_obj)
 
