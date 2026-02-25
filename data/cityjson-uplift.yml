@@ -108,6 +108,7 @@ context:
     CityObjects:
       '@id': city:hasObject
       '@context':
+        '@vocab': http://example.com/vocab/city/attr#
         # City Objects
         Bridge: city:Bridge
         BridgeConstructiveElement: city:BridgeConstructiveElement
@@ -195,8 +196,6 @@ context:
               '@id': city:lod
             surfaces:
               '@id': city:hasSurface
-              '@context':
-                '@vocab': http://example.com/vocab/city/attr#
             boundaries:
               '@id': city:boundaries
               '@container': '@list'
