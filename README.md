@@ -2,6 +2,8 @@
 
 This service can perform data completeness and geometry validation operations on CityJSON / CityGML datasets.
 
+For a non-technical overview of how the validator works, see [OVERVIEW.md](OVERVIEW.md).
+
 This is a [FastAPI](https://fastapi.tiangolo.com/) application which uses
 TU Delft's [val3dity](https://github.com/tudelft3d/val3dity/) to validate geometries,
 [SHACL](https://www.w3.org/TR/shacl/)-based profiles to validate data completeness,
